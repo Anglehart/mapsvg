@@ -1,0 +1,22 @@
+.mapsvg.mapsvg-cursor-pointer .mapsvg-region {
+    cursor: pointer;
+}
+.mapsvg.mapsvg-disabled-regions .mapsvg-region {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    pointer-events: none;
+    cursor: default;
+}
+.mapsvg-disabled {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    pointer-events: none;
+    cursor: default;
+}
+.mapsvg-region-label {
+    -webkit-transition: transform .40s;
+    -moz-transition: transform .40s;
+    -ms-transition: transform .40s;
+    -o-transition: transform .40s;
+    transition: transform .40s;
+}

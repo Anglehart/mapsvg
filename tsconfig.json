@@ -1,0 +1,19 @@
+{
+    "compilerOptions":
+    {
+        "target": "es6",
+        "lib": ["es2016", "dom"],
+        "baseUrl": ".", // This must be specified if "paths" is.
+        "paths": {
+            "jquery": ["node_modules/jquery/dist/jquery"] // This mapping is relative to "baseUrl"
+        },
+        "moduleResolution": "node",
+//        "rootDir": "./js/mapsvg",
+        "rootDir": "./",
+//        "outDir": "./js/mapsvg",
+        "removeComments": true,
+        "sourceMap": true
+    },
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+}

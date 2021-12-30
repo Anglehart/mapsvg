@@ -1,0 +1,158 @@
+.mapsvg-details-container {
+    outline: none !important;
+    touch-action: manipulation;
+    -webkit-backface-visibility:  hidden;
+    -webkit-tap-highlight-color:  transparent;
+    box-sizing: border-box;
+}
+.mapsvg-details-container * {
+    box-sizing: border-box;
+}
+.mapsvg-details-container.mapsvg-filters-wrap .mapsvg-controller-view-content {
+    padding: 10px 10px 80px 10px;
+}
+.mapsvg-details-container {
+    background-color: rgba(255,255,255,.9);
+}
+.mapsvg-details-container:after
+{
+    content: " ";
+    height: 100%;
+    position: absolute;
+    right: -15px;
+    width: 15px;
+    top: 0;
+}
+.mapsvg-details-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    overflow: hidden;
+    max-height: 100%;
+    z-index: 3;
+}
+.mapsvg-details-container.mapsvg-details-container-relative {
+    position: relative;
+}
+.mapsvg-details-container .mapsvg-controller-view {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+.mapsvg-details-container-relative .mapsvg-controller-view {
+    position: relative;
+}
+
+
+/*.mapsvg-details-container > div {*/
+/*background-color: #fafafa;*/
+/*}*/
+.mapsvg-details-container .mapsvg-controller-view-content {
+    padding-top: 0;
+}
+.mapsvg-details-container.near {
+    z-index: 3;
+    pointer-events: none;
+}
+.mapsvg-details-container.near .mapsvg-controller-view {
+    background-color: rgba(255,255,255,.85);
+}
+
+.mapsvg-details-container.top {
+    z-index: 3;
+    pointer-events: none;
+}
+.mapsvg-details-container {
+}
+.mapsvg-details-container:empty {
+    display: none;
+}
+
+.over .mapsvg-details-container {
+    opacity: 0;
+}
+
+.mapsvg-details-container.mapsvg-over {
+    left: 0;
+    width: 100%;
+    z-index: 2;
+}
+.mapsvg-details-container.mapsvg-over:after {
+    box-shadow: none !important;
+}
+.mapsvg-details-container.mapsvg-near {
+    width: 100%;
+    z-index: -1;
+}
+.mapsvg-details-container .mapsvg-controller-view-toolbar {
+    height: 28px;
+    padding: 0;
+}
+.mapsvg-details-close {
+    transform: scale(0.4);
+}
+.mapsvg-details-container.mapsvg-details-container-custom .mapsvg-details-close {
+    disaplay: none;
+}
+.mapsvg-details-back {
+    left: 0;
+    right: auto;
+    cursor: pointer;
+    background: url('../img/left.png');
+    background-size: cover;
+    width: 25px;
+    height: 25px;
+}
+.mapsvg-details-container img {
+    max-width: 100%;
+}
+
+
+@media (max-width: 812px) {
+    /* 812px = iPhone X, all others phones are smaller */
+    body > .mapsvg-details-container {
+        position: fixed;
+        width: 100% !important;
+        height: 100% !important;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 999999;
+        margin: 0 !important;
+    }
+
+    .mapsvg-details-container .mapsvg-controller-view-toolbar {
+        height: 38px;
+        padding:0;
+    }
+    .mapsvg-details-container {
+        background-color: rgba(255,255,255, 1);
+    }
+    .mapsvg-details-container .mapsvg-controller-view-content {
+        padding-bottom: 80px;
+    }
+    /* switch "near" to "over" on mobiles */
+    .mapsvg-details-conainer     {
+        left: 0 !important;
+        width: 100% !important;
+    }
+    .mapsvg-details-container.near {
+        z-index: 3 !important;
+        left: 0 !important;
+    }
+    .mapsvg-directory.closed {
+        /*left: -100%;*/
+        display: none;
+    }
+    .mapsvg-directory {
+        overflow: visible !important;
+    }
+    .mapsvg-mobile-modal-close {
+        display: block !important;
+    }
+}

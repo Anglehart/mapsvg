@@ -1,0 +1,27 @@
+<script type="text/x-handlebars-template" data-name="main">
+    <div id="mapsvg-draw-tools">
+        <div class="btn-group-vertical" data-toggle="buttons" id="mapsvg-draw-mode">
+            <input id="mapsvg-draw-pointer" class="btn-check" type="radio" name="mapsvg_map_mode" checked value="edit" autocomplete="off">
+            <label for="mapsvg-draw-pointer" class="btn btn-outline-secondary btn-sm " data-mode="preview" data-hint="Edit shapes">
+                 <i
+                    class="mfa mfa-mouse-pointer"></i>
+            </label>
+            <input id="mapsvg-draw-pencil" class="btn-check" type="radio" name="mapsvg_map_mode" value="draw" autocomplete="off">
+            <label for="mapsvg-draw-pencil" class="btn btn-outline-secondary btn-sm" data-mode="draw" data-hint="Draw shapes">
+                 <i class="mfa mfa-pencil"></i>
+            </label>
+        </div>
+        <div class="btn-group-vertical" data-toggle="buttons" id="mapsvg-draw-options">
+            <input id="mapsvg-draw-magnet" class="btn-check" type="checkbox" checked id="mapsvg-draw-btn-magnet" name="mapsvg-draw-btn-magnet"
+                   value="edit" autocomplete="off" checked>
+            <label  for="mapsvg-draw-magnet" class="btn btn-outline-secondary btn-sm " data-hint="Snap points">
+                 <i class="mfa mfa-magnet"></i>
+            </label>
+        </div>
+        <div class="btn-group-vertical" id="mapsvg-draw-buttons">
+            <button class="btn btn-sm btn-outline-secondary" id="mapsvg-draw-undo" data-hint="Undo"><i class="mfa mfa-undo"></i>
+            </button>
+        </div>
+    </div>
+    <div id="mapsvg-draw-status-line"><code>Click on shape</code>: edit. <code>Spacebar (hold)</code>: scroll.</div>
+</script>
