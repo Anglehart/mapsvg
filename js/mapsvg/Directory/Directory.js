@@ -310,6 +310,7 @@ export class DirectoryController extends Controller {
         const _this = this;
         if (typeof ids != "object")
             ids = [ids];
+        this.deselectItems();
         ids.forEach(function (id) {
             $(_this.containers.view)
                 .find("#mapsvg-directory-item-" + id)

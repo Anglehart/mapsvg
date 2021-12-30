@@ -1738,6 +1738,13 @@ class MapSVGMap {
             this.containers.scrollpane.style.transform =
                 "translate(" + this.scroll.tx + "px," + this.scroll.ty + "px)";
             this.containers.svg.style.transform = "scale(" + this.superScale + ")";
+            // Пропорциональное увеличение картинок
+            let a = this.superScale / 3;
+            let id = this.containers.map.id;
+            $(`#${id} .map__region-label`).each( function (i) {
+              console.log(this);
+              this.style.transform = "scale(" + a + ")";
+            });
             this.syncZoomLevelWithGoogle();
         }
 

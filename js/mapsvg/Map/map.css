@@ -765,9 +765,9 @@
 }
 
 /* MOBILE DEVICES */
-@media (max-width: 812px){ /* 812px = iPhone X, all others phones are smaller */
+@media (max-width: 812px){
 
-    .select2-container {
+    /* .select2-container {
         z-index: 999999;
     }
 
@@ -776,7 +776,7 @@
         flex-grow: 1;
     }
     .mapsvg-sidebar-right {
-        /*display: none !important;*/
+
     }
     .mapsvg-top-container {
         display: none;
@@ -786,7 +786,6 @@
     .mapsvg-layers-control {
         left: auto !important;
     }
-    /* zoom buttons for mobile devices */
     .mapsvg-btn-map
     {
         width: 32px;
@@ -833,7 +832,7 @@
     .mapsvg-btn-previous-map svg {
         margin: 4px auto;
         width: 25px;
-    }
+    } */
 }
 
 /* ICONS */

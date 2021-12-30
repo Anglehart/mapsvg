@@ -393,6 +393,7 @@ export class DirectoryController extends Controller {
     selectItems(ids) {
         const _this = this;
         if (typeof ids != "object") ids = [ids];
+        this.deselectItems(); // сбросить неактивные директории привыборе новой
         ids.forEach(function (id) {
             $(_this.containers.view)
                 .find("#mapsvg-directory-item-" + id)
