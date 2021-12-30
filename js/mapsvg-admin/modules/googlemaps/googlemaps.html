@@ -14,14 +14,14 @@
         <div class="form-group row mb-3">
             <label class="col-md-3 col-form-label">Enable</label>
             <div class="col-md-9">
-                <div class=" form-switch form-switch-md">
-                <input type="checkbox" id="googleMapsOn" name="googleMaps[on]"
+                <div class=" form-check form-switch form-switch-md">
+                <input type="checkbox" id="googleMapsOn" name="googleMaps[on]" value="1"
                        class="form-check-input" {{#if googleMaps.on}}checked{{/if}} data-live="change">
             </div>
             </div>
         </div>
         <div class="form-group row mb-3">
-            <label class="col-md-3 col-form-label">Search for a location</label>
+            <label class="col-md-3 col-form-label">Go to location</label>
             <div class="col-md-9">
                 <input type="text" class="form-control typeahead" onclick="this.focus();this.select()"
                        id="mapsvg-gm-address" placeholder="Enter address...">
@@ -30,21 +30,7 @@
                 <!-- </span>-->
             </div>
         </div>
-
-        <div class="form-group row mb-3 ">
-            <label class="col-md-3 col-form-label">Map language</label>
-            <div class="col-md-9">
-                <select class="mapsvg-select2 form-control" name="googleMaps[language]" style="text-transform: capitalize;width:100%;" data-live="change">
-                    <option>Automatic, depending on user's location</option>
-                    {{#each languages}}<option {{#ifeq value ../language}}selected{{/ifeq}} value="{{value}}">{{label}}</option>{{/each}}
-                </select>
-                <p class="form-text">Changes the language of locations shown on Google Map.
-                    Also defines the language of addresses returned from the search. You need to save the map settings
-                    and reload the page to apply this setting.</p>
-            </div>
-        </div>
-
-
+        <!-- /input-group -->
         <div class="form-group row mb-3">
             <label class="col-md-3 col-form-label">Map type</label>
             <div class="col-md-9">

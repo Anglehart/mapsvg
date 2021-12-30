@@ -55,7 +55,7 @@
         });
 
         var res = _this.database
-            .import(data, false, this.mapsvg)
+            .import(data)
             .done(function (data) {
                 $.growl.notice({ title: "", message: "File uploaded" });
             })

@@ -43,12 +43,12 @@ export class CheckboxFormElement extends FormElement {
             if (this.showAsSwitch) {
                 $(this.domElements.main)
                     .find("[name='checkboxToSwitch']")
-                    .addClass("form-switch form-switch-md");
+                    .addClass("form-switch form-check form-switch-md");
             }
             if (!this.showAsSwitch) {
                 $(this.domElements.main)
                     .find("[name='checkboxToSwitch']")
-                    .removeClass("form-switch form-switch-md");
+                    .removeClass("form-switch form-check form-switch-md");
             }
         });
 

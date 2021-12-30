@@ -13,7 +13,7 @@
         <div class="form-group row mb-3">
             <label class="col-sm-3 col-form-label">Choropleth</label>
             <div class="col-sm-9">
-                <div class=" form-switch form-switch-md">
+                <div class=" form-check form-switch form-switch-md">
                 <input type="checkbox"  name="choropleth[on]" class="form-check-input mapsvg-toggle-visibility"
                        data-toggle-visibility="#mapsvg-choropleth-options"
                        {{#if choropleth.on}}checked{{/if}} data-live="change"/>
@@ -59,7 +59,7 @@
             <div class="form-group row mb-3">
                 <label class="col-sm-3 col-form-label">Source field select</label>
                 <div class="col-sm-9">
-                    <div class=" form-switch form-switch-md">
+                    <div class=" form-check form-switch form-switch-md">
                     <input type="checkbox" name="choropleth[sourceFieldSelect][on]"
                            class="form-check-input mapsvg-toggle-visibility"
                            data-toggle-visibility="#mapsvg-choropleth-source-fields-select-options"
@@ -87,7 +87,7 @@
             <div class="form-group row mb-3">
                 <label class="col-sm-3 col-form-label">Bubble mode</label>
                 <div class="col-sm-9">
-                    <div class=" form-switch form-switch-md">
+                    <div class=" form-check form-switch form-switch-md">
                     <input type="checkbox" name="choropleth[bubbleMode]" class="form-check-input mapsvg-toggle-visibility"
                            data-last-regions-state="{{#if choropleth.bubbleMode}}on{{else}}off{{/if}}"
                            data-toggle-visibility="#mapsvg-choropleth-bubbleMode-options"
@@ -292,7 +292,7 @@
             <div class="form-group row mb-3">
                 <label class="col-sm-3 col-form-label">Legend</label>
                 <div class="col-sm-9">
-                    <div class=" form-switch form-switch-md">
+                    <div class=" form-check form-switch form-switch-md">
                     <input type="checkbox" name="choropleth[coloring][legend][on]"
                            class="form-check-input mapsvg-toggle-visibility"
                            data-toggle-visibility="#mapsvg-choropleth-legend-options"

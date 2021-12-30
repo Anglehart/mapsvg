@@ -21,7 +21,7 @@ a:hover,
 
 ::placeholder{
     color:#DDD!important;
-}
+    }
 #mapsvg-dashboard input[type=text] {
     padding: 6px 12px;
     line-height: 24px;
@@ -52,10 +52,6 @@ a:hover,
     font-size: 14px;
     line-height: 1.42857143;
     color: #333;
-    box-sizing: border-box;
-}
-#mapsvg-admin *, #mapsvg-admin ::after, #mapsvg-admin ::before {
-    box-sizing: border-box;
 }
 
 .mapsvg {
@@ -73,7 +69,7 @@ input[type=radio] {
     height: 1em;
     margin: .25em 0 0 0;
     vertical-align: top;
-    /*background-color: #fff;*/
+    background-color: #fff;
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
@@ -96,16 +92,11 @@ input[type=radio]:checked::before {
     line-height: inherit;
 }
 
-.form-check .form-check-input {
-    float: left;
-    margin-left: -1.5em;
-}
-
 .form-check-input:checked[type=checkbox] {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e") !important;
 }
 
-#mapsvg-admin input[type=checkbox]:checked::before {
+input[type=checkbox]:checked::before {
     content: none;
     margin: inherit;
     height: inherit;
@@ -1437,11 +1428,6 @@ input.link-editable.form-control:active {
     box-shadow: none !important;
 }
 
-button i.mfa {
-    pointer-events: none;
-}
-
-
 .link-editable {
     position: absolute;
     left: -280px;
@@ -1572,7 +1558,6 @@ button i.mfa {
     display: flex;
     flex: 1;
     flex-flow: column;
-    max-height: 100%;
 }
 
 .mapsvg-view-toolbar {
@@ -2105,7 +2090,7 @@ input.typeahead.form-control.tt-input {
 }
 
 .mapsvg-marker-image-btn {
-    /*.mapsvg-marker-image-selector button {*/
+/*.mapsvg-marker-image-selector button {*/
     margin-right: 5px;
     margin-bottom: 5px;
     width: 35px;
@@ -2236,7 +2221,6 @@ input[type=date], input[type=datetime-local], input[type=datetime], input[type=e
 
 .form-switch.form-switch-md {
     margin-bottom: 1rem; /* JUST FOR STYLING PURPOSE */
-    /*padding-left: 1.4em;*/
 }
 
 .form-switch.form-switch-md .form-check-input {
@@ -2282,6 +2266,16 @@ input[type=date], input[type=datetime-local], input[type=datetime], input[type=e
     overflow: hidden;
     padding-bottom: 9px;
 }
+
+/* GUTENBERG */
+#mapsvg-filters {
+    padding: 5px;
+}
+.components-panel .tt-input {
+    margin: 0 !important;
+}
+/* END OF GUTENBERG */
+
 
 .mapsvg-slide-back {
     transform: translateX(-100%);
@@ -2338,10 +2332,10 @@ a.btn:active {
     background-color: #f5f5f5;
     border-color: #adadad;
 }
-/*.btn.focus, .btn:focus, .btn:hover {*/
-/*    color: #333;*/
-/*    text-decoration: none;*/
-/*}*/
+.btn.focus, .btn:focus, .btn:hover {
+    color: #333;
+    text-decoration: none;
+}
 a {
     color: #337ab7;
     text-decoration: none;
@@ -2427,30 +2421,9 @@ a:active, a:hover {
     background-color: #4589c4;
     border-color: #3572ad;
 }
-.btn-outline-danger:hover {
-    color: #fff;
-}
 /* END BOOTSTRAP */
 
 
 #mapsvg-changelog ul li {
     list-style: disc;
-}
-
-.mapsvg-directory-search-wrap {
-    padding: 0;
-}
-.mapsvg-directory-search-wrap input {
-    border-radius: 5px;
-}
-
-.modal-dialog,
-.modal-dialog p,
-.modal-dialog li {
-    font-size: 14px;
-}
-
-.mapsvg-disabled-link {
-    pointer-events: none;
-    color: #999;
 }

@@ -123,16 +123,9 @@ export class SelectFormElement extends FormElement {
         }
     }
 
-    setInputValue(value: string | Array<{ label: string; value: string | number }>): void {
-        if (this.multiselect) {
-            if (this.value) {
-                $(this.inputs.select).val(this.value.map((el) => el.value));
-            } else {
-                $(this.inputs.select).val([]);
-            }
-        } else {
-            this.inputs.select.value = this.value;
-        }
+    setInputValue(value: string): void {
+        this.inputs.select.value = value;
+        // TODO Vyacheslav - проверить выставление значений после фикса фильтрации объектов по клику на регионе карты
         $(this.inputs.select).trigger("change.select2");
     }
 }

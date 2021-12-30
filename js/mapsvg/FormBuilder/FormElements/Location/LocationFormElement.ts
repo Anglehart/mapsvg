@@ -19,7 +19,6 @@ export class LocationFormElement extends FormElement {
     markersByField: { [key: string]: any };
     markerField: string;
     markersByFieldEnabled: boolean;
-    defaultMarkerPath: string;
     location: Location;
     marker: Marker;
     languages: { label: string; value: string }[];
@@ -170,9 +169,6 @@ export class LocationFormElement extends FormElement {
         this.markersByField = options.markersByField;
         this.markerField = options.markerField;
         this.markersByFieldEnabled = MapSVG.parseBoolean(options.markersByFieldEnabled);
-        this.defaultMarkerPath =
-            options.defaultMarkerPath ||
-            this.formBuilder.mapsvg.getData().options.defaultMarkerImage;
 
         this.templates.marker = Handlebars.compile($("#mapsvg-data-tmpl-marker").html());
     }
@@ -189,7 +185,6 @@ export class LocationFormElement extends FormElement {
     getSchema(): { [p: string]: any } {
         const schema = super.getSchema();
         schema.language = this.language;
-        schema.defaultMarkerPath = this.defaultMarkerPath;
         schema.markersByField = this.markersByField;
         schema.markerField = this.markerField;
         schema.markersByFieldEnabled = MapSVG.parseBoolean(this.markersByFieldEnabled);
@@ -211,7 +206,7 @@ export class LocationFormElement extends FormElement {
             data.markersByFieldEnabled = MapSVG.parseBoolean(this.markersByFieldEnabled);
             const _this = this;
             data.markerImages.forEach(function (m) {
-                if (m.relativeUrl === _this.defaultMarkerPath) {
+                if (m.path === _this.formBuilder.mapsvg.getData().options.defaultMarkerImage) {
                     m.default = true;
                 } else {
                     m.default = false;
@@ -252,8 +247,8 @@ export class LocationFormElement extends FormElement {
         const _this = this;
 
         // Google geocoding
-        const server = new Server();
 
+        const server = new Server();
         if (_this.formBuilder.mapsvg.isGeo()) {
             const locations = new Bloodhound({
                 datumTokenizer: Bloodhound.tokenizers.obj.whitespace("formatted_address"),
@@ -273,35 +268,13 @@ export class LocationFormElement extends FormElement {
             const thContainer = $(this.domElements.main).find(".typeahead");
             const tH = thContainer
                 .typeahead(
-                    { minLength: 3 },
+                    {
+                        minLength: 3,
+                    },
                     {
                         name: "mapsvg-addresses",
                         display: "formatted_address",
-                        async: true,
-                        // @ts-ignore
-                        source: (query, sync, async) => {
-                            const preg = new RegExp(
-                                /^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$/
-                            );
-
-                            if (preg.test(query)) {
-                                const latlng = query.split(",").map((item) => item.trim());
-                                const item = {
-                                    formatted_address: latlng.join(","),
-                                    address_components: [],
-                                    geometry: {
-                                        location: {
-                                            lat: () => latlng[0],
-                                            lng: () => latlng[1],
-                                        },
-                                    },
-                                };
-                                sync([item]);
-                                return;
-                            }
-
-                            MapSVG.geocode({ address: query }, async);
-                        },
+                        source: locations,
                     }
                 )
                 .on("typeahead:asyncrequest", function (e) {
@@ -326,23 +299,20 @@ export class LocationFormElement extends FormElement {
 
                 const locationData = {
                     address: address,
-                    geoPoint: new GeoPoint(
-                        item.geometry.location.lat(),
-                        item.geometry.location.lng()
-                    ),
-                    img: this.getMarkerImage(this.formBuilder.getData()),
-                    imagePath: this.getMarkerImage(this.formBuilder.getData()),
+                    geoPoint: new GeoPoint(item.geometry.location.lat, item.geometry.location.lng),
+                    img: this.formBuilder.mapsvg.getMarkerImage(this.formBuilder.getData()),
+                    imagePath: this.formBuilder.mapsvg.getMarkerImage(this.formBuilder.getData()),
                 };
 
                 this.setValue(locationData, false);
                 thContainer.typeahead("val", "");
                 this.triggerChanged();
             });
-        }
 
-        $(this.domElements.main).on("change", ".marker-file-uploader", function () {
-            _this.markerIconUpload(this);
-        });
+            $(this.domElements.main).on("change", ".marker-file-uploader", function () {
+                _this.markerIconUpload(this);
+            });
+        }
 
         $(this.domElements.main).on("click", ".mapsvg-marker-image-btn-trigger", function (e) {
             e.preventDefault();
@@ -369,16 +339,14 @@ export class LocationFormElement extends FormElement {
 
         $(this.domElements.edit).on("change", 'select[name="markerField"]', function () {
             const fieldName = $(this).val();
-            _this.resetMarkersByField();
-            const newOptions = _this.fillMarkersByFieldOptions(fieldName);
-            _this.setMarkersByField(newOptions);
+            _this.fillMarkersByFieldOptions(fieldName);
         });
         $(this.domElements.edit).on("click", ".mapsvg-marker-image-selector button", function (e) {
             e.preventDefault();
             const src = $(this).find("img").attr("src");
             $(this).parent().find("button").removeClass("active");
             $(this).addClass("active");
-            _this.setDefaultMarkerPath(src);
+            _this.formBuilder.mapsvg.setDefaultMarkerImage(src);
         });
         $(this.domElements.edit).on("click", ".mapsvg-marker-image-btn-trigger", function (e) {
             $(this).toggleClass("active");
@@ -415,7 +383,7 @@ export class LocationFormElement extends FormElement {
                         const marker = resp.marker;
                         const newMarker = `
                             <button class="btn btn-outline-secondary mapsvg-marker-image-btn mapsvg-marker-image-btn-choose active">
-                                <img src="${marker.relativeUrl}" />
+                                <img src="${marker.path}" />
                             </button>
                             </button>
                         `;
@@ -425,7 +393,7 @@ export class LocationFormElement extends FormElement {
                             .removeClass("active");
                         $(newMarker).appendTo(this.domElements.markerSelector);
 
-                        this.setMarkerImage(marker.relativeUrl);
+                        this.setMarkerImage(marker.path);
                         MapSVG.markerImages.push(marker);
                     }
                 })
@@ -464,33 +432,28 @@ export class LocationFormElement extends FormElement {
 
     fillMarkersByFieldOptions(fieldName) {
         const _this = this;
-        const field = _this.formBuilder.mapsvg.objectsRepository.getSchema().getField(fieldName);
-        const options = {};
 
+        const field = _this.formBuilder.mapsvg.objectsRepository.getSchema().getField(fieldName);
         if (field) {
             const markerImg = _this.formBuilder.mapsvg.options.defaultMarkerImage;
             const rows = [];
             field.options.forEach(function (option) {
-                const value = field.type === "region" ? option.id : option.value;
-                const label = field.type === "region" ? option.title || option.id : option.label;
                 const img =
-                    _this.markersByField && _this.markersByField[value]
-                        ? _this.markersByField[value]
+                    _this.markersByField && _this.markersByField[option.value]
+                        ? _this.markersByField[option.value]
                         : markerImg;
                 rows.push(
                     '<tr data-option-id="' +
-                        value +
+                        option.value +
                         '"><td>' +
-                        label +
+                        option.label +
                         '</td><td><button class="btn dropdown-toggle btn-outline-secondary mapsvg-marker-image-btn-trigger mapsvg-marker-image-btn"><img src="' +
                         img +
                         '" class="new-marker-img" /><span class="caret"></span></button></td></tr>'
                 );
-                options[value] = img;
             });
             $("#markers-by-field").empty().append(rows);
         }
-        return options;
     }
 
     renderMarker(marker?: Marker) {
@@ -527,9 +490,9 @@ export class LocationFormElement extends FormElement {
             $(this.domElements.markerSelectorWrap).not(":visible")
         ) {
             $(this.domElements.markerSelector).find(".active").removeClass("active");
-            if (this.value && this.value.markerImagePath) {
+            if (this.value && this.value.imagePath) {
                 $(this.domElements.markerSelector)
-                    .find('[src="' + this.value.markerImagePath + '"]')
+                    .find('[src="' + this.value.imagePath + '"]')
                     .parent()
                     .addClass("active");
             }
@@ -542,13 +505,13 @@ export class LocationFormElement extends FormElement {
         const _this = this;
         const view = this.formBuilder.editMode ? this.domElements.edit : this.domElements.main;
         if (!view) return;
-        const currentImage = this.value ? this.value.markerImagePath : null;
+        const currentImage = this.value ? this.value.imagePath : null;
         const images = MapSVG.markerImages.map(function (image) {
             return (
                 '<button class="btn btn-outline-secondary mapsvg-marker-image-btn mapsvg-marker-image-btn-choose ' +
-                (currentImage == image.relativeUrl ? "active" : "") +
+                (currentImage == image.path ? "active" : "") +
                 '"><img src="' +
-                image.relativeUrl +
+                image.path +
                 '" /></button>'
             );
         });
@@ -588,7 +551,7 @@ export class LocationFormElement extends FormElement {
     }
 
     private setMarkerImage(src: string) {
-        this.setDefaultMarkerPath(src);
+        this.formBuilder.mapsvg.setDefaultMarkerImage(src);
         const value = this.value;
         if (value) {
             value.img = src;
@@ -616,9 +579,9 @@ export class LocationFormElement extends FormElement {
         const images = MapSVG.markerImages.map(function (image) {
             return (
                 '<button class="btn btn-outline-secondary mapsvg-marker-image-btn mapsvg-marker-image-btn-choose ' +
-                (currentImage == image.relativeUrl ? "active" : "") +
+                (currentImage == image.path ? "active" : "") +
                 '"><img src="' +
-                image.relativeUrl +
+                image.path +
                 '" /></button>'
             );
         });
@@ -648,12 +611,6 @@ export class LocationFormElement extends FormElement {
             });
     }
 
-    setMarkersByField(options: { [key: string]: string }): void {
-        this.markersByField = options;
-    }
-    resetMarkersByField() {
-        this.markersByField = {};
-    }
     setMarkerByField(fieldId, markerImg) {
         this.markersByField = this.markersByField || {};
         this.markersByField[fieldId] = markerImg;
@@ -670,54 +627,15 @@ export class LocationFormElement extends FormElement {
         if ($().mselect2) {
             const sel = $(this.domElements.main).find(".mapsvg-select2");
             if (sel.length) {
+                //@ts-ignore
                 sel.mselect2("destroy");
             }
         }
         this.domElements.markerSelector && $(this.domElements.markerSelector).popover("dispose");
     }
 
-    setDefaultMarkerPath(path: string): void {
-        this.defaultMarkerPath = path;
-        this.formBuilder.mapsvg.setDefaultMarkerImage(path);
-    }
-
-    getMarkerImage(data: { [key: string]: any }): string {
-        let fieldValue;
-
-        if (this.markersByFieldEnabled) {
-            fieldValue = data[this.markerField];
-            if (!fieldValue) {
-                return this.defaultMarkerPath || MapSVG.defaultMarkerImage;
-            } else {
-                if (this.markerField === "regions") {
-                    fieldValue = fieldValue[0] && fieldValue[0].id;
-                } else if (typeof fieldValue === "object" && fieldValue.length) {
-                    fieldValue = fieldValue[0].value;
-                }
-                if (this.markersByField[fieldValue]) {
-                    return (
-                        this.markersByField[fieldValue] ||
-                        this.defaultMarkerPath ||
-                        MapSVG.defaultMarkerImage
-                    );
-                }
-            }
-        } else {
-            return this.defaultMarkerPath || MapSVG.defaultMarkerImage;
-        }
-    }
-
     setValue(value: any, updateInput = true): void {
         this.value = value;
-        if (this.value) {
-            if (!this.value.address) {
-                this.value.address = {};
-            }
-            if (Object.keys(this.value.address).length < 2 && this.value.geoPoint) {
-                this.value.address.formatted =
-                    this.value.geoPoint.lat + "," + this.value.geoPoint.lng;
-            }
-        }
         this.renderMarker();
     }
 }

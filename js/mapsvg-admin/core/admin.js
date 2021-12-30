@@ -167,7 +167,7 @@ class ResizeSensor {
         draw: {
             responsive: true,
             disableLinks: true,
-            zoom: { on: true, limit: [-25, 25] },
+            zoom: { on: true, limit: [-10, 10] },
             scroll: { on: true, spacebar: true },
             mouseOver: null,
             mouseOut: null,
@@ -285,6 +285,7 @@ class ResizeSensor {
             },
         },
     };
+    _data.mode = "preview";
 
     methods = {
         getData: function () {
@@ -326,8 +327,17 @@ class ResizeSensor {
                     $("#mapsvg-save").buttonLoading(false);
                     _this.setMode(mode);
                 })
-                .fail(function (response, xhr, abc) {
-                    MapSVG.handleFailedRequest(response);
+                .fail(function (response) {
+                    if (response.responseText) {
+                        response = JSON.parse(response.responseText);
+                        if (response && response.data && response.data.error) {
+                            $.growl.error({ title: "", message: response.data.error });
+                        } else {
+                            $.growl.error({ message: "Server error: settings were not saved" });
+                        }
+                    } else {
+                        $.growl.error({ message: "Server error: settings were not saved" });
+                    }
                 });
         },
 
@@ -397,7 +407,7 @@ class ResizeSensor {
                             newMap.id +
                             '"] <button data-shortcode=\'[mapsvg id="' +
                             newMap.id +
-                            '"]\' class="toggle-tooltip mapsvg-copy-shortcode btn btn-xs btn-default" title="Copy to clipboard"><i class="mfa mfa-clone"></i></button>'
+                            '"]\' class="toggle-tooltip mapsvg-copy-shortcode btn btn-xs btn-default" title="Copy to clipboard"><i class="fa fa-clone"></i></button>'
                     );
                 new_row.prependTo(table_row.closest("tbody"));
             });
@@ -453,7 +463,7 @@ class ResizeSensor {
                                     newMap.id +
                                     '"] <button data-shortcode=\'[mapsvg id="' +
                                     newMap.id +
-                                    '"]\' class="toggle-tooltip mapsvg-copy-shortcode btn btn-xs btn-default" title="Copy to clipboard"><i class="mfa mfa-clone"></i></button>'
+                                    '"]\' class="toggle-tooltip mapsvg-copy-shortcode btn btn-xs btn-default" title="Copy to clipboard"><i class="fa fa-clone"></i></button>'
                             );
                         new_row.find(".alert").remove();
                         new_row.find(".mapsvg-upgrade-v2").remove();
@@ -721,7 +731,7 @@ class ResizeSensor {
                     _data.controllers.draw.show();
                     _data.controllers.draw.viewDidAppear();
                 }
-                msvg.adjustStrokes();
+                msvg.mapAdjustStrokes();
             } else {
                 if (_data.previousMode !== "draw") {
                     return;
@@ -783,14 +793,6 @@ class ResizeSensor {
             const settingsModal = new bootstrap.Modal(document.getElementById("settingsModal"), {
                 keyboard: false,
             });
-            $("body").on("click", ".form-check-label", (e) => {
-                let input = $(e.target).parent().find("input");
-                if (input.length) {
-                    $(input).prop("checked", !$(input).prop("checked"));
-                    $(input).trigger("change");
-                }
-            });
-
             $("#mapsvg-btn-settings-modal").on("click", () => {
                 settingsModal.show();
             });
@@ -820,10 +822,6 @@ class ResizeSensor {
             });
             $("#mapsvg-alert-activate").on("click", ".close", function () {
                 $("#mapsvg-alert-activate").hide();
-            });
-
-            $("#mapsvg-purchase-code-form").on("submit", function (e) {
-                e.preventDetault();
             });
 
             $("#mapsvg-admin").on("click", "#mapsvg-btn-activate", function (e) {
@@ -885,7 +883,7 @@ class ResizeSensor {
                     // }else if(package === 'uploads'){
                     //     svg_file_url_path = MapSVG.urls.uploads + path;
                     // }
-                    options.source = elem.data("relative-url");
+                    options.source = elem.data("path");
 
                     mapsRepo.create({ options: options }).done(function (map) {
                         if (map && map.id) {
@@ -934,6 +932,7 @@ class ResizeSensor {
                     reader.readAsText(file);
                 });
             });
+
             $("#svg_file_uploader_form").on("submit", function (form) {
                 var btn = $(this).find(".btn");
                 btn.buttonLoading(true);
@@ -952,19 +951,19 @@ class ResizeSensor {
                                 delay: 7000,
                                 title: "",
                                 message:
-                                    "File uploaded:<br>" +
-                                    data.file.pathShort +
+                                    "File uploaded:<br>user-uploads/" +
+                                    data.file.name +
                                     '<br /><br />Click on "New SVG file" and enter the file name to create a new map.',
                             });
                             var o = $("#mapsvg-svg-file-select").find(
-                                '[data-relative-url="' + data.file.relativeUrl + '"]'
+                                '[data-path="' + data.file.path + '"]'
                             );
                             if (!o.length)
                                 $("#mapsvg-svg-file-select").append(
-                                    '<option data-relative-url="' +
-                                        data.file.relativeUrl +
-                                        '">' +
-                                        data.file.pathShort +
+                                    '<option data-path="' +
+                                        data.file.path +
+                                        '">user-uploads/' +
+                                        data.file.name +
                                         "</option>"
                                 );
                         }
@@ -1054,7 +1053,7 @@ class ResizeSensor {
                     .done(function (data) {
                         var mapsRepo = new mapsvg.mapsRepository();
                         var options = {
-                            source: data.file.relativeUrl,
+                            source: data.file.path,
                             title: "Image Map",
                         };
                         mapsRepo.create({ options: options }).done(function (map) {
@@ -1081,7 +1080,7 @@ class ResizeSensor {
 
             $("#new-google-map").on("click", function (e) {
                 // e.preventDefault();
-                if (!MapSVG.options.google_api_key) {
+                if (!_data.options.mapsvg_google_api_key) {
                     settingsModal.show();
                     return false;
                 }
@@ -1091,7 +1090,7 @@ class ResizeSensor {
                     title: "Google Map",
                     googleMaps: {
                         on: true,
-                        apiKey: MapSVG.options.google_api_key,
+                        apiKey: _data.options.mapsvg_google_api_key,
                         zoom: 1,
                         center: { lat: 41.99585227532726, lng: 10.688006500000029 },
                     },
@@ -1103,7 +1102,7 @@ class ResizeSensor {
                 });
             });
             $("#download_gmap").on("click", function () {
-                if (!MapSVG.options.google_api_key) {
+                if (!_data.options.mapsvg_google_api_key) {
                     settingsModal.show();
                 } else {
                     _this.showGoogleMapDownloader();
@@ -1127,7 +1126,7 @@ class ResizeSensor {
             //                 }
             //                 if (data.status === "OK") {
             //                     myModal.hide();
-            //                     MapSVG.options.google_api_key = key;
+            //                     _data.options.mapsvg_google_api_key = key;
             //                 } else {
             //                     alert("Error");
             //                 }
@@ -1210,7 +1209,7 @@ class ResizeSensor {
                             data = JSON.parse(data);
                         }
                         settingsModal.hide();
-                        MapSVG.options.google_api_key = key;
+                        _data.options.mapsvg_google_api_key = key;
                     });
                 }
             });
@@ -1232,110 +1231,17 @@ class ResizeSensor {
                     $.growl.error({ title: "", message: "Can't save settings" });
                 });
         },
-        setInputGrantAccessState: function (magicLink) {
-            const btn = $("#mapsvg-toggle-magic-link");
-            const btnModal = $("#btnCustomizationModal");
-
-            if (magicLink) {
-                $("#magic-link").val(magicLink).removeAttr("disabled");
-                $("#mapsvg-submit-ticket-link")
-                    .attr("href", "https://mapsvg.ticksy.com/submit/?magicLink=" + magicLink)
-                    .removeAttr("disabled");
-                $("#mapsvg-submit-ticket-link").removeClass("mapsvg-disabled-link");
-                $("#mapsvg-how-to-grant-access").hide();
-            }
-            if (MapSVG.accessGranted) {
-                // btn.text("Revoke access");
-                // btn.removeClass("btn-outline-secondary");
-                // btn.addClass("btn-outline-danger");
-                // btn.attr("data-granted", "true");
-                btnModal.removeClass("btn-outline-secondary");
-                btnModal.addClass("btn-outline-danger");
-                btnModal.html('<i class="mfa mfa-support"></i> Support: access granted</button>');
-                $("#mapsvg-revoke-access-block").show();
-            } else {
-                // btn.text("Grant access");
-                // btn.removeClass("btn-outline-danger");
-                // btn.addClass("btn-outline-secondary");
-                // btn.attr("data-granted", "false");
-                btnModal.removeClass("btn-outline-danger");
-                btnModal.addClass("btn-outline-secondary");
-                btnModal.html('<i class="mfa mfa-support"></i> Support</button>');
-                $("#mapsvg-revoke-access-block").hide();
-                $("#magic-link").val("").attr("disabled", "disabled");
-            }
-            if (!MapSVG.userIsAdmin) {
-                btn.attr("disabled", "disabled");
-                $("#magic-link-disabled").show();
-                $("#mapsvg-revoke-access-block").remove();
-            }
-        },
-        copyMagicLinkToClipBoard: function () {
-            $("#magic-link")[0].select();
-            document.execCommand("copy");
-            $.growl.notice({
-                title: "",
-                message: "The link has been copied to clipboard",
-                duration: 3000,
-            });
-        },
-        grantAccess: function () {
-            var server = new mapsvg.server();
-            const btn = $("#mapsvg-toggle-magic-link");
-            btn.buttonLoading(true);
-            server
-                .post("magiclink")
-                .done((result) => {
-                    btn.buttonLoading(false);
-
-                    if (result.link) {
-                        MapSVG.accessGranted = true;
-                        _this.setInputGrantAccessState(result.link);
-                        _this.copyMagicLinkToClipBoard();
-                    } else {
-                        $.growl.error({
-                            title: "",
-                            message:
-                                "Can't grant access automatically. Please provide your login/password in the ticket message. " +
-                                "If you need an email address to create a new user account, please use this one: support@mapsvg.com",
-                            duration: 30000,
-                        });
-                    }
-                })
-                .fail(() => {
-                    btn.buttonLoading(false);
-                    $.growl.error({
-                        title: "",
-                        message: "Can't create the link",
-                        duration: 2000,
-                    });
-                });
-        },
-        revokeAccess: function () {
-            var server = new mapsvg.server();
-            const btn = $("#mapsvg-revoke-access");
-            btn.buttonLoading(true);
-
-            server
-                .delete("magiclink")
-                .done((result) => {
-                    btn.buttonLoading(false);
-                    MapSVG.accessGranted = false;
-                    _this.setInputGrantAccessState();
-                })
-                .fail(() => {
-                    btn.buttonLoading(false);
-                    $.growl.error({
-                        title: "",
-                        message:
-                            'Can\'t revoke access! Please go to <b>WP Admin &gt; Users</b> and remove "mapsvg" user.',
-                        duration: 10000,
-                    });
-                });
-        },
         setEventHandlers: function () {
             jQuery("#mapsvg-map-mode-2 input").on("change", (e) => {
                 setTimeout(() => jQuery(e.target).blur(), 400);
+            });
+
+            $("#customizationModal").appendTo("body");
+            const customModal = new bootstrap.Modal(document.getElementById("customizationModal"), {
+                keyboard: true,
+            });
+            $("#btnCustomizationModal").on("click", () => {
+                customModal.show();
             });
 
             $("body").on("click", ".toggle-tooltip", function () {
@@ -1345,7 +1251,7 @@ class ResizeSensor {
                 $(this).tooltip("hide");
             });
 
-            $("body").on("click", ".form-check-label", (e) => {
+            $("#mapsvg-admin").on("click", ".form-check-label", (e) => {
                 let input = $(e.target).parent().find("input");
                 if (input.length) {
                     $(input).prop("checked", !$(input).prop("checked"));
@@ -1384,8 +1290,8 @@ class ResizeSensor {
                 document.body.removeChild(el);
                 $.growl.notice({
                     title: "",
-                    message: "The shortcode has been copied to clipboard",
-                    duration: 3000,
+                    message: "Shortcode copied to clipboard",
+                    duration: 700,
                 });
             });
 
@@ -1541,33 +1447,9 @@ class ResizeSensor {
             _data.controllers = {};
             _data.view = $("#mapsvg-admin");
 
-            _this.setInputGrantAccessState();
-            $("#customizationModal").appendTo("body");
-            const customModal = new bootstrap.Modal(document.getElementById("customizationModal"), {
-                keyboard: true,
-            });
-            $("#btnCustomizationModal").on("click", () => {
-                customModal.show();
-            });
-            $("#mapsvg-toggle-magic-link").on("click", (e) => {
-                _this.grantAccess();
-            });
-            $("#mapsvg-revoke-access").on("click", function () {
-                _this.revokeAccess();
-            });
-            $("#mapsvg-copy-magic-link").on("click", function () {
-                _this.copyMagicLinkToClipBoard();
-            });
-
             var onEditMapScreen = _data.options.map ? true : false;
 
             if (onEditMapScreen) {
-                if (!options.map || options.map.optionsBroken) {
-                    alert(
-                        "Map settings are corrupted. Please contact support: https://mapsvg.ticksy.com"
-                    );
-                    return;
-                }
                 _this.setMapTitle(_data.options.map.options.title);
             }
 
@@ -1613,7 +1495,8 @@ class ResizeSensor {
                     if (!_data.options.map.options.googleMaps) {
                         _data.options.map.options.googleMaps = {};
                     }
-                    _data.options.map.options.googleMaps.apiKey = MapSVG.options.google_api_key;
+                    _data.options.map.options.googleMaps.apiKey =
+                        _data.options.mapsvg_google_api_key;
 
                     msvg = new mapsvg.map("mapsvg", _data.options.map);
 
@@ -1646,7 +1529,7 @@ class ResizeSensor {
                         }
                         MapSVG.markerImages = _data.options.markerImages || [];
                         if (!_data.options.map.options.defaultMarkerImage) {
-                            msvg.setDefaultMarkerImage(_data.options.markerImages[0].relativeUrl);
+                            msvg.setDefaultMarkerImage(_data.options.markerImages[0].path);
                         }
 
                         // Safary is laggy when there are many input fields in a form. We'll need
@@ -1812,7 +1695,7 @@ class ResizeSensor {
                     queryTokenizer: Bloodhound.tokenizers.whitespace,
                     remote: {
                         url: server.getUrl("geocoding") + "?address=%QUERY%",
-                        // url: 'https://maps.googleapis.com/maps/api/geocode/json?key='+MapSVG.options.google_api_key+'&address=%QUERY%&sensor=true',
+                        // url: 'https://maps.googleapis.com/maps/api/geocode/json?key='+_data.options.mapsvg_google_api_key+'&address=%QUERY%&sensor=true',
                         wildcard: "%QUERY%",
                         transform: function (response) {
                             if (response.error_message) {
@@ -1826,27 +1709,22 @@ class ResizeSensor {
                 var thContainer = _this.googleMapsFullscreenWrapper.find(
                     "#mapsvg-gm-address-search"
                 );
-
                 var tH = thContainer.typeahead(null, {
                     name: "mapsvg-addresses",
                     display: "formatted_address",
-                    // source: locations,
-                    source: (query, sync, async) => {
-                        MapSVG.geocode({ address: query }, async);
-                    },
-                    async: true,
+                    source: locations,
                     minLength: 2,
                 });
                 thContainer.on("typeahead:select", function (ev, item) {
                     var b = item.geometry.bounds ? item.geometry.bounds : item.geometry.viewport;
-                    var bounds = new google.maps.LatLngBounds(b.getSouthWest(), b.getNorthEast());
+                    var bounds = new google.maps.LatLngBounds(b.southwest, b.northeast);
                     _this.gm.fitBounds(bounds);
                 });
                 // $('#mapsvg-gm-address-search').on('focus', function(){
                 //     $(this).select();
                 // });
 
-                _this.gmapikey = MapSVG.options.google_api_key;
+                _this.gmapikey = _data.options.mapsvg_google_api_key;
                 window.gm_authFailure = function () {
                     if (MapSVG.GoogleMapBadApiKey) {
                         MapSVG.GoogleMapBadApiKey();

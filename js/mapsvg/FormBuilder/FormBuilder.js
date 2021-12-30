@@ -135,12 +135,8 @@ export class FormBuilder {
     viewDidLoad() { }
     setEventHandlers() {
         const _this = this;
-        $(this.getForm()).on("submit", (e) => {
-            e.preventDefault();
-        });
         if (this.filtersMode && this.clearButton) {
-            $(this.elements.buttons.clearButton).on("click", (e) => {
-                e.preventDefault();
+            $(this.elements.buttons.clearButton).on("click", () => {
                 this.clearAllFields();
             });
         }
@@ -276,7 +272,14 @@ export class FormBuilder {
         });
     }
     clearAllFields() {
-        this.formElements.forEach((f) => f.setValue(null));
+        $(this.getForm())
+            .find("input")
+            .not(":button, :submit, :reset, :hidden, :checkbox, :radio")
+            .val("")
+            .prop("selected", false);
+        $(this.getForm()).find('input[type="radio"]').prop("checked", false);
+        $(this.getForm()).find('input[type="checkbox"]').prop("checked", false);
+        $(this.getForm()).find("select").val("").trigger("change.select2");
         this.events.trigger("cleared");
     }
     setFormElementEventHandlers(formElement) {
@@ -292,7 +295,7 @@ export class FormBuilder {
         else {
             formElement.events.on("changed", (_formElement) => {
                 const name = _formElement.name;
-                const value = _formElement.getValue();
+                const value = _formElement.value;
                 if (_formElement.type !== "search") {
                     this.events.trigger("changed.field", _formElement, [_formElement, name, value]);
                 }
@@ -300,6 +303,28 @@ export class FormBuilder {
                     this.events.trigger("changed.search", _formElement, [_formElement, value]);
                 }
             });
+            const locationField = _this.mapsvg &&
+                _this.mapsvg.objectsRepository &&
+                _this.mapsvg.objectsRepository.getSchema() &&
+                _this.mapsvg.objectsRepository.getSchema().getField("location");
+            if (locationField &&
+                locationField.markersByFieldEnabled &&
+                locationField.markerField &&
+                formElement.name == locationField.markerField &&
+                Object.values(locationField.markersByField).length > 0) {
+                formElement.events.on("changed", (_formElement) => {
+                    const name = _formElement.name;
+                    const value = _formElement.value;
+                    const src = locationField.markersByField[value];
+                    if (src) {
+                        if (_this.markerBackup) {
+                            const marker = _this.mapsvg.getMarker(_this.markerBackup.id);
+                            marker.setImage(src);
+                            $(_this.view).find(".mapsvg-marker-image-btn img").attr("src", src);
+                        }
+                    }
+                });
+            }
         }
     }
     save() {
@@ -337,9 +362,7 @@ export class FormBuilder {
             const formElement = this.formElements.get(field.name);
             if (formElement) {
                 if (typeof data[field.name] !== "undefined") {
-                    if (formElement.getValue() !== data[field.name]) {
-                        formElement.setValue(data[field.name]);
-                    }
+                    formElement.setValue(data[field.name]);
                 }
                 else {
                     formElement.setValue(null);
@@ -439,8 +462,7 @@ export class FormBuilder {
             $(_this.container).append(this.view);
         }
         if (_this.filtersMode && _this.clearButton) {
-            _this.elements.buttons.clearButton = $('<div class="form-group mapsvg-filters-reset-container">' +
-                '<button type="button" class="btn btn-outline-secondary mapsvg-filters-reset">' +
+            _this.elements.buttons.clearButton = $('<div class="form-group mapsvg-filters-reset-container"><button class="btn btn-outline-secondary mapsvg-filters-reset">' +
                 _this.clearButtonText +
                 "</button></div>")[0];
             $(this.getForm()).append(_this.elements.buttons.clearButton);
@@ -580,7 +602,6 @@ export class FormBuilder {
     close() {
         const _this = this;
         this.formElements.forEach((formElement) => formElement.destroy());
-        this.mediaUploader && this.mediaUploader.off("select");
         MapSVG.formBuilder = null;
         this.events.trigger("close", this, [this]);
     }

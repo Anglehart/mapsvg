@@ -4,9 +4,6 @@ namespace MapSVG;
 
 class Gutenberg
 {
-
-    private $mappablePostTypes;
-
     function updatePostData($postOrId){
 
         $db = Database::get();
@@ -62,29 +59,31 @@ class Gutenberg
 
     function init(){
 
-        $this->mappablePostTypes = \MapSVG\Options::get('mappable_post_types');
         $this->addLocationFieldToPosts();
 
-        if(!empty($this->mappablePostTypes)){
-            foreach($this->mappablePostTypes as $postType){
-                add_action( 'rest_after_insert_'.$postType, [$this, 'updatePostData'], 10, 2);
-                add_action( 'untrash_'.$postType, [$this, 'updatePostData'] );
-                add_action( 'wp_trash_'.$postType, [$this, 'deletePostData'] );
+        $mappable_post_types = Options::get('mappable_post_types');
+
+        if(!empty($mappable_post_types)){
+            foreach($mappable_post_types as $post_type){
+                add_action( 'rest_after_insert_'.$post_type, [$this, 'updatePostData'], 10, 2);
+                add_action( 'untrash_'.$post_type, [$this, 'updatePostData'] );
+                add_action( 'wp_trash_'.$post_type, [$this, 'deletePostData'] );
             }
         }
     }
 
     function addLocationFieldToPosts() {
-        if(!empty($this->mappablePostTypes)){
-            foreach($this->mappablePostTypes as $postType) {
-                add_post_type_support($postType, 'custom-fields');
-                register_meta('post', 'mapsvg_location', array(
-                    'object_subtype' => $postType,
-                    'show_in_rest' => true,
-                    'type' => 'string',
-                    'single' => true,
-                ));
-            }
-        }
+        register_meta('post', 'mapsvg_location', array(
+            'object_subtype' => 'page',
+            'show_in_rest' => true,
+            'type' => 'string',
+            'single' => true,
+        ));
+        register_meta('post', 'mapsvg_location', array(
+            'object_subtype' => 'post',
+            'show_in_rest' => true,
+            'type' => 'string',
+            'single' => true,
+        ));
     }
 }

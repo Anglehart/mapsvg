@@ -5,11 +5,11 @@
             <p class="form-text" style="margin-top: 0;"><em>Click on the map to add a marker</em></p>
             <div class="input-group mapsvg-new-marker" style="display: none;">
                 <div class="input-group-btn">
-                   <button class="btn btn-outline-secondary  mapsvg-marker-image-btn-trigger mapsvg-marker-image-btn" data-marker-id="{{id}}"><img src="{{markerImagePath}}" class="new-marker-img"/> <span class="caret"></span></button>
+                   <button class="btn btn-outline-secondary  mapsvg-marker-image-btn-trigger mapsvg-marker-image-btn" data-marker-id="{{id}}"><img src="{{imagePath}}" class="new-marker-img"/> <span class="caret"></span></button>
                 </div>
                 <input type="text" disabled="disabled" class="form-control mapsvg-marker-id" placeholder="marker_id" name="marker_id"/>
                 <div class="input-group-btn">
-                    <button class="btn btn-outline-secondary  mapsvg-marker-delete"><i class="mfa mfa-trash"></i></button>
+                    <button class="btn btn-outline-secondary  mapsvg-marker-delete"><i class="fa fa-trash"></i></button>
                 </div>
             </div>
             {{#unless editMode}}

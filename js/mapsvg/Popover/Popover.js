@@ -7,7 +7,7 @@ const $ = jQuery;
 export class PopoverController extends Controller {
     constructor(options) {
         super(options);
-        this.autoresize = true;
+        options.autoresize = true;
         this.point = options.point;
         this.yShift = options.yShift;
         this.mapObject = options.mapObject;

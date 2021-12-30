@@ -51,18 +51,17 @@ class SchemaController extends Controller {
 	 * @param array $data
 	 * @return array
 	 */
-	public static function formatReceivedData($data){
+	public static function formatReceivedData(array $data){
 
-		if(isset($data)){
-			if(!is_string($data)){
-				$data = json_encode($data, JSON_UNESCAPED_UNICODE);
+		if(isset($data['fields'])){
+			if(!is_string($data['fields'])){
+				$data['fields'] = json_encode($data['fields'], JSON_UNESCAPED_UNICODE);
 			}
-			$data = str_replace("!mapsvg-encoded-slct", "select",   $data);
-			$data = str_replace("!mapsvg-encoded-tbl",  "table",    $data);
-			$data = str_replace("!mapsvg-encoded-db",   "database", $data);
-			$data = str_replace("!mapsvg-encoded-vc",   "varchar",  $data);
-			$data = str_replace("!mapsvg-encoded-int",   "int(11)",  $data);
-			$data = json_decode($data, true);
+			$data['fields'] = str_replace("!mapsvg-encoded-slct", "select",   $data['fields']);
+			$data['fields'] = str_replace("!mapsvg-encoded-tbl",  "table",    $data['fields']);
+			$data['fields'] = str_replace("!mapsvg-encoded-db",   "database", $data['fields']);
+			$data['fields'] = str_replace("!mapsvg-encoded-vc",   "varchar",  $data['fields']);
+			$data['fields'] = json_decode($data['fields'], true);
 		}
 		return $data;
 	}

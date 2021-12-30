@@ -10,16 +10,16 @@
         <label class="form-label">What fields to filter by</label>
         <select class="form-control mapsvg-select2" name="parameterName" data-live="change">
             <option value="">...</option>
-            {{#if external.regionFieldsFilterable}}
+            {{#if external.regionFields}}
                 <optgroup label="Region">
-                    {{#each external.regionFieldsFilterable}}
+                    {{#each external.regionFields}}
                         <option {{#ifeq ../parameterName this}}selected{{/ifeq}}>{{this}}</option>
                     {{/each}}
                 </optgroup>
             {{/if}}
-            {{#if external.databaseFieldsFilterable}}
+    {{#if external.databaseFields}}
                 <optgroup label="Database Object">
-                    {{#each external.databaseFieldsFilterable}}
+                    {{#each external.databaseFields}}
                         <option {{#ifeq ../parameterName this}}selected{{/ifeq}}>{{this}}</option>
                     {{/each}}
                 </optgroup>
@@ -46,6 +46,6 @@
     </div>
 
     <div class="form-group mb-3 ">
-        <button class="btn btn-outline-secondary  mapsvg-remove"><i class="mfa mfa-trash"></i> Remove</button>
+        <button class="btn btn-outline-secondary  mapsvg-remove"><i class="fa fa-trash"></i> Remove</button>
     </div>
 </script>

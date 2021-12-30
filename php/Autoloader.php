@@ -59,9 +59,6 @@ class Autoloader
 	public static function loader( $className )
     {
 
-        if(strpos($className, "Options")){
-            $che = 1;
-        }
         if(strpos($className, "MapSVG") === false){
             return;
         }

@@ -46,7 +46,7 @@
 
     <div class="form-group mb-3 ">
         <label class="form-label">User location button</label>
-        <div class="form-switch form-switch-md">
+        <div class="form-check form-switch form-switch-md">
 
             <input type="checkbox" class="form-check-input" name="userLocationButton"  {{#if userLocationButton}}checked{{/if}} />
         </div>
@@ -60,7 +60,7 @@
     <div class="form-group mb-3 ">
         <label class="form-label">Search by ZIP/postcode only</label>
         <div>
-            <div class="form-switch form-switch-md">
+            <div class="form-check form-switch form-switch-md">
             <input type="checkbox" class="form-check-input" name="searchByZip"  {{#if searchByZip}}checked{{/if}} />
             </div>
             <p class="form-text">
@@ -78,6 +78,14 @@
                 MapSVG will do the search only when the required number of characters is entered in the search field.
             </p>
         </div>
+    </div>
+
+    <div class="form-group mb-3 ">
+        <label class="form-label">Language of addresses</label>
+        <select class="mapsvg-select2 form-control" name="language" style="text-transform: capitalize;width:100%;">
+            <option>...</option>
+            {{#each languages}}<option {{#ifeq value ../language}}selected{{/ifeq}} value="{{value}}">{{label}}</option>{{/each}}
+        </select>
     </div>
 
     <div class="form-group mb-3 ">
@@ -178,6 +186,6 @@
     <!--</div>-->
 
     <div class="form-group mb-3 ">
-        <button class="btn btn-outline-secondary  mapsvg-remove"><i class="mfa mfa-trash"></i> Remove</button>
+        <button class="btn btn-outline-secondary  mapsvg-remove"><i class="fa fa-trash"></i> Remove</button>
     </div>
 </script>

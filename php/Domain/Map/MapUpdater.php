@@ -54,7 +54,7 @@ class MapUpdater {
 	 *
 	 * @return bool
 	 */
-	function upgradeToVersion($map, $update_to, $params = array()){
+	function upgradeToVersion(Map $map, $update_to, $params = array()){
 
 		$mapsRepo = new MapsRepository();
 
@@ -81,7 +81,9 @@ class MapUpdater {
 					$events[$eventName] = $eventFunc;
 				}
 				$map->options['events'] = $events;
-
+				// Update map version
+				$map->setVersion('6.0.0');
+				$mapsRepo->update($map);
 				break;
 			case '5.0.0':
 
@@ -90,20 +92,18 @@ class MapUpdater {
 				}
 
 				$schemaRepo = new SchemaRepository();
+
+//				$schema_fields = $this->db->get_var("SELECT fields from ".$this->db->prefix."mapsvg_schema WHERE table_name LIKE '%database_".$map->id."'");
+//				$schema_fields  = json_decode($schema_fields, true);
+//				$schema_with_markers = false;
+
 				$schema = $map->objects->getSchema();
 
-				// Some maps are missing schema
-				if(!$schema){
-				    break;
-                }
-
-				if(!empty($schema->fields)) {
-                    foreach ($schema->fields as $field) {
-                        if ($field->type === 'marker') {
-                            $schema_with_markers = true;
-                        }
-                    }
-                }
+				foreach($schema->fields as $field){
+					if($field['type'] === 'marker'){
+						$schema_with_markers = true;
+					}
+				}
 
 				$location_field = array('label'=>'Location','name'=>'location','type'=>'location','db_type'=>'text', 'visible' => true);
 				$location_field = (object)$location_field;
@@ -113,43 +113,43 @@ class MapUpdater {
 					$schema->addField($location_field);
 					$schemaRepo->update($schema);
 
-                    //4. SELECT id, marker FROM table_xxx
-                    $rows = $this->db->get_results('SELECT id, marker FROM '.$this->db->prefix."mapsvg_database_".$map->id, ARRAY_A);
-                    if($rows){
-                        // Iterate over all rows in the table and build "location" from "marker"
-                        foreach($rows as $row){
-                            $location = array();
-                            $marker = json_decode($row['marker'], true);
-                            if(isset($marker['geoCoords']) && isset($marker['geoCoords'][0]) && isset($marker['geoCoords'][1])){
-                                $location['location_lat'] = $marker['geoCoords'][0];
-                                $location['location_lng'] = $marker['geoCoords'][1];
-                            } else if (isset($marker['xy'])){
-                                $location['location_x'] = $marker['xy'][0];
-                                $location['location_y'] = $marker['xy'][1];
-                            } else if (isset($marker['x']) && isset($marker['y'])){
-                                $location['location_x'] = $marker['x'];
-                                $location['location_y'] = $marker['y'];
-                            }
-                            if(isset($marker['src'])){
-                                $arr = explode('/',$marker['src']);
-                                $location['location_img'] = array_pop($arr);
-                            }
-                            // Update DB record, add location data
-                            $this->db->update($this->db->prefix."mapsvg_database_".$map->id, $location, array('id'=>$row['id']));
-                        }
-                    }
-
+					//4. SELECT id, marker FROM table_xxx
+					$rows = $map->objects->find();
+					if($rows){
+						// Iterate over all rows in the table and build "location" from "marker"
+						foreach($rows as $row){
+							$location = array('id'=>$row['id']);
+							$marker = json_decode($row['marker'], true);
+							if(isset($marker['geoCoords']) && isset($marker['geoCoords'][0]) && isset($marker['geoCoords'][1])){
+								$location['location_lat'] = $marker['geoCoords'][0];
+								$location['location_lng'] = $marker['geoCoords'][1];
+							} else if (isset($marker['xy'])){
+								$location['location_x'] = $marker['xy'][0];
+								$location['location_y'] = $marker['xy'][1];
+							} else if (isset($marker['x']) && isset($marker['y'])){
+								$location['location_x'] = $marker['x'];
+								$location['location_y'] = $marker['y'];
+							}
+							if(isset($marker['src'])){
+								$arr = explode('/',$marker['src']);
+								$location['location_img'] = array_pop($arr);
+							}
+							// Update DB record, add location data
+							$map->objects->update($location);
+						}
+					}
 					// If ALL rows (ONLY) were converted successfully then remove the marker column
 					// $new_schema = $new_schema - marker_col;
 					$schema->removeField('marker');
 					$schemaRepo->update($schema);
 				}
 
+				// 5. Update map version
+				$map->setVersion('5.0.0');
+				$mapsRepo->update($map);
 				break;
 
 			case '3.2.0':
-
-			    break;
 
 				if(version_compare($map->version, '3.0.0', '<')){
 					return false;
@@ -158,26 +158,25 @@ class MapUpdater {
 				$schemaRepo = new SchemaRepository();
 
 				// 1. Change region_id to regions (to allow multiple regions)
-				$table = $this->db->mapsvg_prefix.'database_'.$map->id;
-				$regions_table = $this->db->mapsvg_prefix.'regions_'.$map->id;
+				$table = $this->db->prefix.'mapsvg_database_'.$map->id;
+				$regions_table = $this->db->prefix.'mapsvg_regions_'.$map->id;
 				if($this->db->get_row('SHOW TABLES LIKE \''.$table.'\'') && $this->db->get_row('SHOW COLUMNS FROM '.$table.' LIKE \'region_id\'')){
 					$this->db->query('UPDATE  '.$table.' t1, '.$regions_table.' t2 SET t1.region_id_text = CONCAT(\'[{"id": "\', t2.id, \'", "title": "\', t2.title,\'"}]\') WHERE t1.region_id = t2.id');
 					$this->db->query('ALTER TABLE '.$table.' DROP COLUMN `region_id`');
 					$this->db->query('ALTER TABLE '.$table.' CHANGE `region_id_text` `regions` TEXT');
 				}
-				$schemaName = str_replace($this->db->mapsvg_prefix,"",$table);
-				$schema = $this->db->get_var('SELECT fields FROM '.$this->db->mapsvg_prefix.'schema WHERE name=\''.$schemaName.'\'');
+				$schema = $this->db->get_var('SELECT fields FROM '.$this->db->prefix.'mapsvg_schema WHERE table_name=\''.$table.'\'');
 				if($schema){
 					$schema = str_replace('"name":"region_id"','"name":"regions"',$schema);
-					$this->db->query('UPDATE '.$this->db->mapsvg_prefix.'schema SET `fields`=\''.$schema.'\'  WHERE name=\''.$schemaName.'\'');
+					$this->db->query('UPDATE '.$this->db->prefix.'mapsvg_schema SET `fields`=\''.$schema.'\'  WHERE table_name=\''.$table.'\'');
 				}
 
 
 				// 2. Check if there is "status"/ "status_text" field in regions table and if there is, rename it to "_status"
 				$schema = $map->regions->getSchema();
 				if(!$schema){
-//                    $map->regions = RegionsRepository::createRepository('regions_' . $map->id);
-//                    $map->setRegionsTable();
+					$schema = array();
+//					_mapsvg_save_schema($map->id, 'regions', $schema);
 				}else{
 					$need_rename_status_field = false;
 					$need_rename_status_text_field = false;
@@ -191,6 +190,7 @@ class MapUpdater {
 						}
 					}
 					$schemaRepo->update($schema);
+//					_mapsvg_save_schema($map->id, 'regions', $schema, true);
 					if($need_rename_status_field){
 						$this->db->query('ALTER TABLE '.$regions_table.' CHANGE `status` `_status` '.$need_rename_status_field);
 					}
@@ -232,10 +232,11 @@ class MapUpdater {
 					}
 				}
 
+				// 5. Update map version
+				update_post_meta($map->id, 'mapsvg_version', '3.2.0');
+
 				break;
 			case '2.0.0':
-
-			    break;
 
 				$_data = $this->getMetaOptions($map->id);
 
@@ -337,9 +338,6 @@ class MapUpdater {
 			default:
 				null;
 		}
-
-        $map->setVersion($update_to);
-        $mapsRepo->update($map);
 	}
 
 }

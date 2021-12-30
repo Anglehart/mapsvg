@@ -36,9 +36,6 @@ export class ViewBox {
     toArray() {
         return [this.x, this.y, this.width, this.height];
     }
-    clone() {
-        return new ViewBox({ x: this.x, y: this.y, width: this.width, height: this.height });
-    }
     fitsInViewBox(viewBox, atLeastByOneDimension) {
         if (atLeastByOneDimension === true) {
             return viewBox.width > this.width || viewBox.height > this.height;

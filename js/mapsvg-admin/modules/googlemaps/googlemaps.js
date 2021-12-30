@@ -960,135 +960,6 @@
                 },
             ],
         };
-        this.languages = [
-            { value: "sq", label: "Albanian" },
-            { value: "ar", label: "Arabic" },
-            {
-                value: "eu",
-                label: "Basque",
-            },
-            { value: "be", label: "Belarusian" },
-            { value: "bg", label: "Bulgarian" },
-            {
-                value: "my",
-                label: "Burmese",
-            },
-            { value: "bn", label: "Bengali" },
-            { value: "ca", label: "Catalan" },
-            {
-                value: "zh-cn",
-                label: "Chinese (simplified)",
-            },
-            { value: "zh-tw", label: "Chinese (traditional)" },
-            {
-                value: "hr",
-                label: "Croatian",
-            },
-            { value: "cs", label: "Czech" },
-            { value: "da", label: "Danish" },
-            {
-                value: "nl",
-                label: "Dutch",
-            },
-            { value: "en", label: "English" },
-            {
-                value: "en-au",
-                label: "English (australian)",
-            },
-            { value: "en-gb", label: "English (great Britain)" },
-            {
-                value: "fa",
-                label: "Farsi",
-            },
-            { value: "fi", label: "Finnish" },
-            { value: "fil", label: "Filipino" },
-            {
-                value: "fr",
-                label: "French",
-            },
-            { value: "gl", label: "Galician" },
-            { value: "de", label: "German" },
-            {
-                value: "el",
-                label: "Greek",
-            },
-            { value: "gu", label: "Gujarati" },
-            { value: "iw", label: "Hebrew" },
-            {
-                value: "hi",
-                label: "Hindi",
-            },
-            { value: "hu", label: "Hungarian" },
-            { value: "id", label: "Indonesian" },
-            {
-                value: "it",
-                label: "Italian",
-            },
-            { value: "ja", label: "Japanese" },
-            { value: "kn", label: "Kannada" },
-            {
-                value: "kk",
-                label: "Kazakh",
-            },
-            { value: "ko", label: "Korean" },
-            { value: "ky", label: "Kyrgyz" },
-            {
-                value: "lt",
-                label: "Lithuanian",
-            },
-            { value: "lv", label: "Latvian" },
-            { value: "mk", label: "Macedonian" },
-            {
-                value: "ml",
-                label: "Malayalam",
-            },
-            { value: "mr", label: "Marathi" },
-            { value: "no", label: "Norwegian" },
-            {
-                value: "pl",
-                label: "Polish",
-            },
-            { value: "pt", label: "Portuguese" },
-            {
-                value: "pt-br",
-                label: "Portuguese (brazil)",
-            },
-            { value: "pt-pt", label: "Portuguese (portugal)" },
-            {
-                value: "pa",
-                label: "Punjabi",
-            },
-            { value: "ro", label: "Romanian" },
-            { value: "ru", label: "Russian" },
-            {
-                value: "sr",
-                label: "Serbian",
-            },
-            { value: "sk", label: "Slovak" },
-            { value: "sl", label: "Slovenian" },
-            {
-                value: "es",
-                label: "Spanish",
-            },
-            { value: "sv", label: "Swedish" },
-            { value: "tl", label: "Tagalog" },
-            {
-                value: "ta",
-                label: "Tamil",
-            },
-            { value: "te", label: "Telugu" },
-            { value: "th", label: "Thai" },
-            {
-                value: "tr",
-                label: "Turkish",
-            },
-            { value: "uk", label: "Ukrainian" },
-            { value: "uz", label: "Uzbek" },
-            {
-                value: "vi",
-                label: "Vietnamese",
-            },
-        ];
     };
     window.MapSVGAdminGoogleMapsController = MapSVGAdminGoogleMapsController;
     MapSVG.extend(MapSVGAdminGoogleMapsController, window.MapSVGAdminController);
@@ -1131,27 +1002,24 @@
         var tH = thContainer.typeahead(null, {
             name: "mapsvg-addresses",
             display: "formatted_address",
-            source: (query, sync, async) => {
-                MapSVG.geocode({ address: query }, async);
-            },
-            async: true,
+            source: locations,
             minLength: 2,
         });
         thContainer.on("typeahead:select", function (ev, item) {
             var b = item.geometry.bounds ? item.geometry.bounds : item.geometry.viewport;
-            var bounds = new google.maps.LatLngBounds(b.getSouthWest(), b.getNorthEast());
+            var bounds = new google.maps.LatLngBounds(b.southwest, b.northeast);
             _this.mapsvg.googleMaps.map.fitBounds(bounds);
         });
 
-        this.view.on("change", 'input[name="googleMaps[style]"]', function (e) {
+        this.view.on('change','input[name="googleMaps\[style\]"]', function(e){
             if (!_this.mapsvg.options.googleMaps.on) {
                 return false;
             }
 
             const style = $(this).val();
 
-            if (style === "custom") {
-                _this.view.find("#mapsvg-gm-custom-style-extra").show();
+            if (style === 'custom'){
+                _this.view.find('#mapsvg-gm-custom-style-extra').show();
                 _this.updateScroll();
                 $("#mapsvg-gm-custom-style-textarea").trigger("change");
             } else {
@@ -1236,12 +1104,5 @@
             // });
         });
          */
-    };
-
-    MapSVGAdminGoogleMapsController.prototype.getTemplateData = function () {
-        const data = this.mapsvg.getOptions(true, null);
-        data.languages = this.languages;
-        data.language = data.googleMaps.language;
-        return data;
     };
 })(jQuery, window, mapsvg.globals);

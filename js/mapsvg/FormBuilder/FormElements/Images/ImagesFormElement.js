@@ -49,8 +49,6 @@ export class ImagesFormElement extends FormElement {
         const _this = this;
         const imageDOM = $(this.domElements.main).find(".mapsvg-data-images");
         this.external.mediaUploader.on("select", () => {
-            if (_this.formBuilder.mediaUploaderisOpenedFor !== _this)
-                return false;
             const attachments = _this.external.mediaUploader.state().get("selection").toJSON();
             attachments.forEach(function (img) {
                 const image = { sizes: {} };
@@ -86,7 +84,6 @@ export class ImagesFormElement extends FormElement {
         });
         $(_this.domElements.main).on("click", ".mapsvg-upload-image", function (e) {
             e.preventDefault();
-            _this.formBuilder.mediaUploaderisOpenedFor = _this;
             _this.external.mediaUploader.open();
         });
         $(_this.domElements.main).on("click", ".mapsvg-image-delete", function (e) {
@@ -123,14 +120,10 @@ export class ImagesFormElement extends FormElement {
                     .data("image", image);
                 const imgContainer = $('<div class="mapsvg-thumbnail-wrap"></div>').data("image", image);
                 imgContainer.append(img);
-                imgContainer.append('<i class="mfa mfa-times  mapsvg-image-delete"></i>');
+                imgContainer.append('<i class="fa fa-times  mapsvg-image-delete"></i>');
                 imageDOM.append(imgContainer);
             });
         $(this.domElements.main).find("input").val(this.value);
-    }
-    destroy() {
-        super.destroy();
-        this.external.mediaUploader.off("select");
     }
 }
 //# sourceMappingURL=ImagesFormElement.js.map

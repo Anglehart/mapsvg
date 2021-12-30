@@ -21,9 +21,6 @@ class Map extends Model implements \JsonSerializable {
 	/* @var array Map options */
 	public $options;
 
-	/* @var boolean Map optionsBroken state, when json_decode from DB failed */
-	public $optionsBroken;
-
 	/* @var string $svgFilePath Path to SVG file */
 	public $svgFilePath;
 
@@ -49,27 +46,16 @@ class Map extends Model implements \JsonSerializable {
 	/* @var string $version Number of MapSVG version the map was created in */
 	public $version = MAPSVG_VERSION;
 
-	/* @var bool $renderJsonWithObjects Defines if the list of child Objects should be included in JSON */
-	private $renderJsonWithObjects = false;
-
-	/* @var bool $renderJsonWithRegions Defines if the list of child Regions should be included in JSON */
-	private $renderJsonWithRegions = false;
+	/* @var bool $renderJsonWithData Defines if the list of child Regions/Objects should be included in JSON */
+	private $renderJsonWithData = false;
 
 	/* @var bool $renderJsonWithData Defines if Schema should be included in JSON */
 	private $renderJsonWithSchema = false;
 
 
 
-	public function __construct( $data ) {
+	public function __construct( array $data ) {
 		parent::__construct( $data );
-
-        if(!isset($this->optionsBroken)){
-            $this->setOptionsBroken(false);
-        }
-        if($this->optionsBroken){
-            return;
-        }
-
 		if(!isset($this->options['database'])){
 			$this->options['database'] = ['pagination'=>["on" => true, "perpage" => 30]];
 		}
@@ -105,7 +91,7 @@ class Map extends Model implements \JsonSerializable {
 	 * @return array
 	 */
 	public function getData() {
-		$data = array(
+		return array(
 			'id' => $this->id,
 			'title' => $this->title,
 			'options' => $this->options,
@@ -115,10 +101,6 @@ class Map extends Model implements \JsonSerializable {
             'status' => $this->status,
             'statusChangedAt' => $this->statusChangedAt
 		);
-		if($this->optionsBroken){
-            $data['optionsBroken'] = true;
-        }
-		return $data;
 	}
     public function setStatus($status)
     {
@@ -139,51 +121,46 @@ class Map extends Model implements \JsonSerializable {
 	{
 
 		$data = $this->getData();
-		if(isset($data['optionsBroken'])){
-		    return $data;
-        }
 
-		if($this->renderJsonWithRegions){
-            $sortBy  = ( isset($this->options['menu']) && $this->options['menu']['source'] == 'regions' ? (isset($this->options['menu']['sortBy']) ?  $this->options['menu']['sortBy'] : 'id') : ( isset($this->options['menu']) && strpos($this->options['source'],'geo-cal') !== false ? 'title' : 'id' ) );
-            $sortDir = isset($this->options['menu']) &&  $this->options['menu']['source'] == 'regions' ? (isset($this->options['menu']['sortDirection']) ?  $this->options['menu']['sortDirection'] : 'desc') : 'asc';
-            $sort = [["field" => $sortBy, "order" => $sortDir]];
+		if($this->renderJsonWithData){
 
-            $regionsQuery = array(
-                'perpage' => 0,
-                'sortBy'  => ( isset($this->options['menu']) && $this->options['menu']['source'] == 'regions' ? (isset($this->options['menu']['sortBy']) ?  $this->options['menu']['sortBy'] : 'id'): ( isset($options['menu']) && strpos($this->options['source'],'geo-cal') !== false ? 'title' : 'id' ) ),
-                "sort" => $sort
-            );
-            if(isset($this->options['menu']) && isset($this->options['menu']['filterout']) && $this->options['menu']['source']=='regions' && !empty($this->options['menu']['filterout']['field'])){
-                $regionsQuery['filterout'][$this->options['menu']['filterout']['field']] = $this->options['menu']['filterout']['val'];
-            }
-            if($this->regions) $this->regions->fill($regionsQuery);
+			$sortBy  = ( isset($this->options['menu']) && $this->options['menu']['source'] == 'regions' ? (isset($this->options['menu']['sortBy']) ?  $this->options['menu']['sortBy'] : 'id') : ( isset($this->options['menu']) && strpos($this->options['source'],'geo-cal') !== false ? 'title' : 'id' ) );
+			$sortDir = isset($this->options['menu']) &&  $this->options['menu']['source'] == 'regions' ? (isset($this->options['menu']['sortDirection']) ?  $this->options['menu']['sortDirection'] : 'desc') : 'asc';
+			$sort = [["field" => $sortBy, "order" => $sortDir]];
 
-            if($this->renderJsonWithSchema){
-                if($this->regions) $this->regions->withSchema();
-            }
-            $data['options']['data_regions'] = $this->regions;
-        }
-        if($this->renderJsonWithObjects){
-            $sortBy  = ( isset($this->options['menu']) && $this->options['menu']['source'] == 'database' ? (isset($this->options['menu']['sortBy']) ?  $this->options['menu']['sortBy'] : 'id') : ( isset($this->options['menu']) && strpos($this->options['source'],'geo-cal') !== false ? 'title' : 'id' ) );
-            $sortDir = isset($this->options['menu']) &&  $this->options['menu']['source'] == 'database' ? (isset($this->options['menu']['sortDirection']) ?  $this->options['menu']['sortDirection'] : 'desc') : 'asc';
-            $sort = [["field" => $sortBy, "order" => $sortDir]];
+			$regionsQuery = array(
+				'perpage' => 0,
+				'sortBy'  => ( isset($this->options['menu']) && $this->options['menu']['source'] == 'regions' ? (isset($this->options['menu']['sortBy']) ?  $this->options['menu']['sortBy'] : 'id'): ( isset($options['menu']) && strpos($this->options['source'],'geo-cal') !== false ? 'title' : 'id' ) ),
+				"sort" => $sort
+			);
+			if(isset($this->options['menu']) && isset($this->options['menu']['filterout']) && $this->options['menu']['source']=='regions' && !empty($this->options['menu']['filterout']['field'])){
+				$regionsQuery['filterout'][$this->options['menu']['filterout']['field']] = $this->options['menu']['filterout']['val'];
+			}
 
-            $objectsQuery = array(
-                'perpage' => isset($this->options['database']) && (int)$this->options['database']['pagination']['on'] ? $this->options['database']['pagination']['perpage'] : 0,
-                "sort" => $sort
-            );
-            if(isset($this->options['menu']) && isset($this->options['menu']['filterout']) && $this->options['menu']['source']=='database' && !empty($this->options['menu']['filterout']['field'])) {
-                $objectsQuery['filterout'][ $this->options['menu']['filterout']['field'] ] = $this->options['menu']['filterout']['val'];
-            }
+			$sortBy  = ( isset($this->options['menu']) && $this->options['menu']['source'] == 'database' ? (isset($this->options['menu']['sortBy']) ?  $this->options['menu']['sortBy'] : 'id') : ( isset($this->options['menu']) && strpos($this->options['source'],'geo-cal') !== false ? 'title' : 'id' ) );
+			$sortDir = isset($this->options['menu']) &&  $this->options['menu']['source'] == 'database' ? (isset($this->options['menu']['sortDirection']) ?  $this->options['menu']['sortDirection'] : 'desc') : 'asc';
+			$sort = [["field" => $sortBy, "order" => $sortDir]];
 
-            if($this->objects) $this->objects->fill($objectsQuery);
+			$objectsQuery = array(
+				'perpage' => isset($this->options['database']) && (int)$this->options['database']['pagination']['on'] ? $this->options['database']['pagination']['perpage'] : 0,
+				"sort" => $sort
+			);
+			if(isset($this->options['menu']) && isset($this->options['menu']['filterout']) && $this->options['menu']['source']=='database' && !empty($this->options['menu']['filterout']['field'])) {
+				$objectsQuery['filterout'][ $this->options['menu']['filterout']['field'] ] = $this->options['menu']['filterout']['val'];
+			}
 
-            if($this->renderJsonWithSchema){
-                if($this->objects) $this->objects->withSchema();
-            }
-            $data['options']['data_objects'] = $this->objects;
-        }
 
+			$this->regions->fill($regionsQuery);
+			$this->objects->fill($objectsQuery);
+
+			if($this->renderJsonWithSchema){
+				$this->regions->withSchema();
+				$this->objects->withSchema();
+			}
+
+			$data['options']['data_regions'] = $this->regions;
+			$data['options']['data_objects'] = $this->objects;
+		}
 		$data['options']['id'] = $this->id;
 		$data['options']['version'] = $this->version;
 
@@ -193,15 +170,8 @@ class Map extends Model implements \JsonSerializable {
 	/**
 	 * Defines whether JSON should contain Regions/Objects arrays
 	 */
-	public function withObjects(){
-		$this->renderJsonWithObjects = true;
-	}
-
-	/**
-	 * Defines whether JSON should contain Regions/Objects arrays
-	 */
-	public function withRegions(){
-		$this->renderJsonWithRegions = true;
+	public function withData(){
+		$this->renderJsonWithData = true;
 	}
 
 	/**
@@ -215,7 +185,7 @@ class Map extends Model implements \JsonSerializable {
 	 * Sets map title
 	 * @param string|null $title
 	 */
-	public function setTitle($title = null){
+	public function setTitle(string $title = null){
 		$this->title = $title;
 	}
 
@@ -223,10 +193,10 @@ class Map extends Model implements \JsonSerializable {
 	 * Sets SVG file path and loads its "modified" timestamp
 	 * @param string|null $svgFilePath
 	 */
-	public function setSvgFilePath($svgFilePath = null){
+	public function setSvgFilePath(string $svgFilePath = null){
 		if($this->svgFilePath !== $svgFilePath){
 			$this->svgFilePath = $svgFilePath;
-			$this->svgFile = new SVGFile(array('relativeUrl'=>$this->svgFilePath));
+			$this->svgFile = new SVGFile(array('path'=>$this->svgFilePath));
 			$this->setSvgFileLastChanged($this->svgFile->lastChanged());
 		}
 	}
@@ -235,7 +205,7 @@ class Map extends Model implements \JsonSerializable {
 	 * Sets the timestamp of the last changes in the file
 	 * @param string|null $svgFileLastChanged
 	 */
-	public function setSvgFileLastChanged($svgFileLastChanged = null){
+	public function setSvgFileLastChanged(string $svgFileLastChanged = null){
 		$this->svgFileLastChanged = (int)$svgFileLastChanged;
 	}
 
@@ -248,38 +218,16 @@ class Map extends Model implements \JsonSerializable {
 	}
 
 	/**
-	 * Sets map options broken state
-	 * @param $options
-	 */
-	public function setOptionsBroken($value){
-        $this->optionsBroken = $value;
-    }
-	/**
 	 * Sets map options
 	 * @param $options
 	 */
 	public function setOptions($options){
-	    // todo вот тут ломается апгрейд
 		if(is_string($options)){
-			$tryDecode = json_decode($options, true);
-			if(!$tryDecode){
-			    $this->setOptionsBroken(true);
-                $this->options = $options;
-            } else {
-			    $this->options = $tryDecode;
-            }
-		} else {
-            $this->options = $options;
-        }
-		if($this->options && is_array($this->options) && isset($this->options['source'])){
-            $this->setOptionsBroken(false);
-            $filePath = isset($this->options['source']) ? $this->options['source'] : '';
-            $this->setSvgFilePath($filePath);
-        } else {
-            $this->setOptionsBroken(true);
-            return;
-        }
-
+			$options = json_decode($options, true);
+		}
+		$this->options = $options;
+		$filePath = isset($this->options['source']) ? $this->options['source'] : '';
+		$this->setSvgFilePath($filePath);
 	}
 
 	/**
@@ -308,8 +256,8 @@ class Map extends Model implements \JsonSerializable {
 			list($junk, $fileServerPath) = explode(basename(WP_CONTENT_DIR), $this->svgFilePath);
 			$fileServerPath = WP_CONTENT_DIR.$fileServerPath;
 		} else {
-			list($junk,$fileServerPath) = explode(basename(MAPSVG_UPLOADS_DIR), $this->svgFilePath);
-			$fileServerPath = MAPSVG_UPLOADS_DIR.$fileServerPath;
+			list($junk,$fileServerPath) = explode(basename(MAPSVG_MAPS_UPLOADS_DIR), $this->svgFilePath);
+			$fileServerPath = MAPSVG_MAPS_UPLOADS_DIR.$fileServerPath;
 		}
 
 		if(file_exists($fileServerPath)){

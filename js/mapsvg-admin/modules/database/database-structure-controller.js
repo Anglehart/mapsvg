@@ -27,26 +27,10 @@
                     var schema = _this.database.getSchema();
                     schema.update({ fields: options });
                     let schemRepo = new mapsvg.schemaRepository();
-                    let oldMarkersByFieldEnabled = _this.database.getSchema().getField("location")
-                        ? _this.database.getSchema().getField("location").markersByFieldEnabled
-                        : null;
-                    let newMarkersByFieldEnabled = schema.getField("location")
-                        ? schema.getField("location").markersByFieldEnabled
-                        : null;
-                    schemRepo
-                        .update(schema)
-                        .done(function () {
-                            if (newMarkersByFieldEnabled || oldMarkersByFieldEnabled) {
-                                _this.mapsvg.objectsRepository.getLoaded().forEach((object) => {
-                                    object.reloadMarkerImage();
-                                });
-                            }
-                            formBuilder.updateExtraParamsInFormElements();
-                            $.growl.notice({ title: "", message: "Settings saved", duration: 700 });
-                        })
-                        .fail((response) => {
-                            MapSVG.handleFailedRequest(response);
-                        });
+                    schemRepo.update(schema).done(function () {
+                        formBuilder.updateExtraParamsInFormElements();
+                        $.growl.notice({ title: "", message: "Settings saved", duration: 700 });
+                    });
                     this.admin.save(true);
                 },
                 load: (formBuilder) => {

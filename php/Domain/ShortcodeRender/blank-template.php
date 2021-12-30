@@ -59,7 +59,7 @@
 
     <article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
         <?php $title = the_title( '<h1 class="entry-title">', '</h1>', false ); ?>
-        <?php if(strlen($title)>29 && !isset($_GET["mapsvg_shortcode"])){ ?>
+        <?php if(strlen($title)>29){ ?>
             <header class="entry-header page-header">
                 <?php echo $title; ?>
             </header>

@@ -191,7 +191,6 @@ class MapSVGMap {
         googleMaps?: HTMLElement;
         mapContainer?: HTMLElement;
         scrollpane?: HTMLElement;
-        scrollpaneWrap?: HTMLElement;
         wrap?: HTMLElement;
         wrapAll?: HTMLElement;
         loading?: HTMLElement;
@@ -301,23 +300,6 @@ class MapSVGMap {
     /* This property comes from v5 without any changes */
     $gauge: any;
 
-    /**
-     * AfterLoad event can be blocked by:
-     * 1. Loading Google API JS files
-     * 2. Loading filters controller
-     * When a blocker is introduced, it increases the number of afterLoadBlockers
-     * when mapsvg.finalizeMapLoading is called, it checks if afterLoadBlockers = 0
-     */
-    afterLoadBlockers: number;
-    loaded: boolean;
-
-    /**
-     *
-     * @param containerId
-     * @param mapParams
-     * @param externalParams
-     */
-
     constructor(
         containerId: string,
         mapParams: {
@@ -325,8 +307,7 @@ class MapSVGMap {
             options: MapOptionsInterface;
             svgFileLastChanged: number;
             version: string;
-        },
-        externalParams?: { [key: string]: any }
+        }
     ) {
         const options = mapParams.options;
 
@@ -361,13 +342,11 @@ class MapSVGMap {
         this.containers = {
             map: document.getElementById(this.containerId),
             scrollpane: $('<div class="mapsvg-scrollpane"></div>')[0],
-            scrollpaneWrap: $('<div class="mapsvg-scrollpane-wrap"></div>')[0],
             layers: $('<div class="mapsvg-layers-wrap"></div>')[0],
         };
 
         this.containers.map.appendChild(this.containers.layers);
-        this.containers.map.appendChild(this.containers.scrollpaneWrap);
-        this.containers.scrollpaneWrap.appendChild(this.containers.scrollpane);
+        this.containers.map.appendChild(this.containers.scrollpane);
 
         this.whRatio = 0;
         this.isScrolling = false;
@@ -397,15 +376,7 @@ class MapSVGMap {
             "object",
             "objects/" + this.options.database.objectsTableName
         );
-        if (this.options.database.noFiltersNoLoad) {
-            this.objectsRepository.setNoFiltersNoLoad(true);
-        }
-
-        this.objectsRepository.query.update({
-            perpage: this.options.database.pagination.on
-                ? this.options.database.pagination.perpage
-                : 0,
-        });
+        this.objectsRepository.query.update({ perpage: this.options.database.pagination.perpage });
 
         this.schemaRepository = new SchemaRepository();
 
@@ -440,33 +411,6 @@ class MapSVGMap {
             zoomLimit: true,
             maxZoomService: null,
         };
-
-        // Set 3 blockers initially:
-        // 1. The map loading process itself
-        this.afterLoadBlockers = 1;
-        this.loaded = false;
-
-        // 2. Regions loading
-        // 3. Objects loading
-        if (this.id) {
-            this.afterLoadBlockers += 2;
-        }
-
-        // 4. Google maps API blocker?
-        if (this.options.googleMaps.on) {
-            this.afterLoadBlockers++;
-        }
-        // 5. Filters may block too because the load remote HTML filters which is async process
-        if (this.filtersShouldBeShown()) {
-            this.afterLoadBlockers++;
-        }
-
-        // if (MapSVG && externalParams) {
-        //     for (const i in externalParams) {
-        //         MapSVG[i] = externalParams[i];
-        //         window.MapSVG[i] = externalParams[i];
-        //     }
-        // }
 
         this.init();
     }
@@ -526,7 +470,7 @@ class MapSVGMap {
                 const id = $(this)[0].getAttribute("id");
                 if (id) {
                     const title = $(this)[0].getAttribute("title");
-                    options.push({ label: title || id, value: id });
+                    options.push({ label: title, value: id });
                 }
             });
         optionGroups.push({ title: "SVG Layers / Groups", options: options });
@@ -537,7 +481,7 @@ class MapSVGMap {
                 const id = $(this)[0].getAttribute("id");
                 if (id) {
                     const title = $(this)[0].getAttribute("title");
-                    options2.push({ label: title || id, value: id });
+                    options2.push({ label: title, value: id });
                 }
             });
         optionGroups.push({ title: "Other SVG objects", options: options2 });
@@ -665,7 +609,7 @@ class MapSVGMap {
         if (
             !this.editMode &&
             this.options.menu.source === "database" &&
-            !this.objectsRepository.loaded
+            this.objectsRepository.getLoaded().length === 0
         ) {
             return;
         }
@@ -1221,7 +1165,7 @@ class MapSVGMap {
         });
 
         this.objectsRepository.getLoaded().forEach((obj, index) => {
-            const regions = obj.getRegionsForTable(this.options.database.regionsTableName);
+            const regions = obj.getRegionsForTable(this.regionsRepository.schema.name);
             if (regions && regions.length) {
                 regions.forEach((region) => {
                     const r = this.getRegion(region.id);
@@ -1243,7 +1187,7 @@ class MapSVGMap {
                 if (name == "directoryItem" || name == "directoryCategoryItem") {
                     const dirItemTemplate = this.options.templates.directoryItem;
                     t =
-                        '{{#each items}}<div id="mapsvg-directory-item-{{#if id_no_spaces}}{{id_no_spaces}}{{else}}{{id}}{{/if}}" class="mapsvg-directory-item" data-object-id="{{id}}">' +
+                        '{{#each items}}<div id="mapsvg-directory-item-{{id}}" class="mapsvg-directory-item" data-object-id="{{id}}">' +
                         dirItemTemplate +
                         "</div>{{/each}}";
                     if (
@@ -1650,8 +1594,8 @@ class MapSVGMap {
             typeof this.options.tooltips.minWidth !== "undefined"
         ) {
             this.controllers.tooltip.setSize(
-                this.options.tooltips.minWidth,
-                this.options.tooltips.maxWidth
+                this.options.tooltips.maxWidth,
+                this.options.tooltips.minWidth
             );
         }
     }
@@ -1786,10 +1730,10 @@ class MapSVGMap {
             // So we just zoom-in and then check if zoom has changed.
             // If it's changed then we set the center point
             const googlePrevZoom = this.googleMaps.map.getZoom();
-            this.googleMaps.map.setCenter(this.getCenterGeoPoint());
             this.googleMaps.map.setZoom(this.getZoomForGoogle());
-            // if (googlePrevZoom !== this.googleMaps.map.getZoom()) {
-            // }
+            if (googlePrevZoom !== this.googleMaps.map.getZoom()) {
+                this.googleMaps.map.setCenter(this.getCenterGeoPoint());
+            }
         } else {
             this.containers.scrollpane.style.transform =
                 "translate(" + this.scroll.tx + "px," + this.scroll.ty + "px)";
@@ -1800,7 +1744,7 @@ class MapSVGMap {
         this.movingItemsAdjustScreenPosition();
 
         if (isZooming) {
-            this.adjustStrokes();
+            this.mapAdjustStrokes();
             this.toggleSvgLayerOnZoom();
             if (this.options.clustering.on) {
                 // Google Maps is calling setViewBox 20-30 times per zoom cycle (400ms)
@@ -1946,8 +1890,7 @@ class MapSVGMap {
 
         // Check if map is on border between 180/-180 longitude
         if (xyNE.x < xySW.y) {
-            const mapPointsWidth =
-                (this.svgDefault.viewBox.width / this.converter.mapLonDelta) * 360;
+            const mapPointsWidth = (this.svgDefault.viewBox.width / this.mapLonDelta) * 360;
             xySW.x = -(mapPointsWidth - xySW.y);
         }
 
@@ -1961,7 +1904,6 @@ class MapSVGMap {
      * Must be called when the map is shown after being hidden.
      */
     redraw(): void {
-        this.disableAnimation();
         if (MapSVG.browser.ie) {
             $(this.containers.svg).css({ height: this.svgDefault.viewBox.height });
         }
@@ -1986,8 +1928,7 @@ class MapSVGMap {
             this.controllers.directory.updateScroll();
         }
         this.movingItemsAdjustScreenPosition();
-        this.adjustStrokes();
-        this.enableAnimation();
+        this.mapAdjustStrokes();
     }
 
     /**
@@ -2111,7 +2052,7 @@ class MapSVGMap {
 
         $.extend(true, this.options, { zoom: options });
         //(options.buttons && options.buttons.on) && (options.buttons.on = MapSVG.parseBoolean(options.buttons.on));
-        $(this.containers.scrollpaneWrap).off("wheel.mapsvg");
+        $(this.containers.map).off("wheel.mapsvg");
 
         if (this.options.zoom.mousewheel) {
             // var lastZoomTime = 0;
@@ -2120,7 +2061,7 @@ class MapSVGMap {
             if (MapSVG.browser.firefox) {
                 this.firefoxScroll = { insideIframe: false, scrollX: 0, scrollY: 0 };
 
-                $(this.containers.scrollpaneWrap)
+                $(this.containers.map)
                     .on("mouseenter", () => {
                         this.firefoxScroll.insideIframe = true;
                         this.firefoxScroll.scrollX = window.scrollX;
@@ -2136,22 +2077,24 @@ class MapSVGMap {
                 });
             }
 
-            $(this.containers.scrollpaneWrap).on("wheel.mapsvg", (event: JQuery.MouseEventBase) => {
-                event.preventDefault();
-                this.mouseWheelZoom(event);
-                // this.throttle(this.mouseWheelZoom, 500, this, [event]);
-                return false;
-            });
-            $(this.layers.markers).on("wheel.mapsvg", (event: JQuery.MouseEventBase) => {
-                event.preventDefault();
-                this.mouseWheelZoom(event);
-                return false;
+            $(this.containers.map).on("wheel.mapsvg", (event: JQuery.MouseEventBase) => {
+                this.throttle(this.mouseWheelZoom, 500, this, [event]);
+                return;
             });
         }
         this.canZoom = true;
     }
 
     mouseWheelZoom(event: JQuery.MouseEventBase<any, any, any, any>): void {
+        if (
+            $(event.target).hasClass("mapsvg-popover") ||
+            $(event.target).closest(".mapsvg-popover").length ||
+            $(event.target).hasClass("mapsvg-details-container") ||
+            $(event.target).closest(".mapsvg-details-container").length
+        ) {
+            return;
+        }
+
         event.preventDefault();
         // @ts-ignore - doesn't recognize .deltaY
         const d = Math.sign(-event.originalEvent.deltaY);
@@ -2869,19 +2812,6 @@ class MapSVGMap {
         }
     }
 
-    private setGlobalDistanceFilter(): void {
-        if (
-            this.objectsRepository &&
-            this.objectsRepository.query.filters &&
-            this.objectsRepository.query.filters.distance
-        ) {
-            const dist = this.objectsRepository.query.filters.distance;
-            MapSVG.distanceSearch = this.objectsRepository.query.filters.distance;
-        } else {
-            MapSVG.distanceSearch = null;
-        }
-    }
-
     private updateFilterTags() {
         $(this.containers.filterTags) && $(this.containers.filterTags).empty();
 
@@ -3218,14 +3148,11 @@ class MapSVGMap {
                     },
                 });
                 this.controllers.directory._init();
-            }
-            if (options.source) {
+            } else {
                 this.controllers.directory.repository =
                     this.options.menu.source === "regions"
                         ? this.regionsRepository
                         : this.objectsRepository;
-            }
-            if (options.sortBy || options.sortDirection) {
                 this.controllers.directory.repository.query.update({
                     sort: [
                         {
@@ -3234,13 +3161,11 @@ class MapSVGMap {
                         },
                     ],
                 });
-            }
-            if (options.filterout) {
-                const f = {};
-                f[this.options.menu.filterout.field] = this.options.menu.filterout.val;
-                this.controllers.directory.repository.query.setFilterOut(f);
-            }
-            if (options.location) {
+                if (options.filterout) {
+                    const f = {};
+                    f[this.options.menu.filterout.field] = this.options.menu.filterout.val;
+                    this.controllers.directory.repository.query.setFilterOut(f);
+                }
                 this.controllers.directory.scrollable = this.shouldBeScrollable(
                     this.options.menu.location
                 );
@@ -3350,6 +3275,11 @@ class MapSVGMap {
         if (this.options.googleMaps.on) {
             $(this.containers.map).toggleClass("mapsvg-with-google-map", true);
             if (!MapSVG.googleMapsApiLoaded) {
+                this.events.on("googleMapsBoundsChanged", (bounds) => {
+                    // if (this.isZooming) {
+                    this.setViewBoxByGoogleMapsOverlay();
+                    // }
+                });
                 this.loadGoogleMapsAPI(
                     () => {
                         this.setGoogleMaps();
@@ -3383,7 +3313,6 @@ class MapSVGMap {
                         streetViewControl: false,
                         zoomControl: false,
                         styles: options.styleJSON,
-                        tilt: 0,
                     });
                     let overlay;
 
@@ -3445,13 +3374,8 @@ class MapSVGMap {
                                 this.toggleSvgLayerOnZoom();
                                 // }
                                 this.events.trigger("googleMapsLoaded");
-                                this.afterLoadBlockers--;
-                                this.finalizeMapLoading();
                             }, 300);
                         }, 1);
-                    });
-                    this.events.on("googleMapsBoundsChanged", (bounds) => {
-                        this.setViewBoxByGoogleMapsOverlay();
                     });
                 } else {
                     $(this.containers.map).toggleClass("mapsvg-with-google-map", true);
@@ -3459,7 +3383,6 @@ class MapSVGMap {
                     if (options.type) {
                         this.googleMaps.map.setMapTypeId(options.type);
                     }
-                    this.setViewBoxByGoogleMapsOverlay();
                 }
             }
         } else {
@@ -3637,9 +3560,7 @@ class MapSVGMap {
             libraries = "&libraries=" + gmLibraries.join(",");
         }
         this.googleMapsScript.src =
-            "https://maps.googleapis.com/maps/api/js?language=" +
-            this.options.googleMaps.language +
-            "&key=" +
+            "https://maps.googleapis.com/maps/api/js?language=en&key=" +
             this.options.googleMaps.apiKey +
             libraries;
 
@@ -3742,7 +3663,8 @@ class MapSVGMap {
      * @param {boolean} modal - If filter should be in a modal window
      */
     loadFiltersController(container: HTMLElement, modal = false): void {
-        if (!this.filtersShouldBeShown()) {
+        // If the list of filter fields is empty, exit
+        if (this.filtersSchema.getFields().length === 0) {
             return;
         }
 
@@ -3773,9 +3695,18 @@ class MapSVGMap {
             this.changedSearch = null;
         } else {
             this.changedSearch = () => {
-                this.filtersRepository.query.searchFallback = this.filtersSchema.getFieldByType(
-                    "search"
-                ).searchFallback;
+                this.throttle(this.filtersRepository.reload, 400, this.filtersRepository);
+            };
+            this.changedFields = () => {
+                this.throttle(this.filtersRepository.reload, 400, this.filtersRepository);
+            };
+        }
+
+        if (this.options.filters.searchButton) {
+            this.changedFields = null;
+            this.changedSearch = null;
+        } else {
+            this.changedSearch = () => {
                 this.throttle(this.filtersRepository.reload, 400, this.filtersRepository);
             };
             this.changedFields = () => {
@@ -3804,9 +3735,8 @@ class MapSVGMap {
             searchButtonText: this.options.filters.searchButtonText,
             padding: this.options.filters.padding,
             events: {
-                cleared: () => {
+                "cleared.fields": () => {
                     this.deselectAllRegions();
-                    this.filtersRepository.reload();
                 },
                 "changed.fields": this.changedFields,
 
@@ -3818,8 +3748,6 @@ class MapSVGMap {
                 loaded: () => {
                     // TODO add resize sensor to directory instead of this:
                     this.controllers.directory && this.controllers.directory.updateTopShift();
-                    this.afterLoadBlockers--;
-                    this.finalizeMapLoading();
                 },
                 "click.btn.showFilters": () => {
                     this.loadFiltersModal();
@@ -3828,15 +3756,6 @@ class MapSVGMap {
         });
         this.controllers.filters._init();
     }
-
-    private filtersShouldBeShown() {
-        return (
-            this.options.filters.on &&
-            this.options.filtersSchema &&
-            this.options.filtersSchema.length > 0
-        );
-    }
-
     /**
      * Event handler for text search input
      * @param {string} text
@@ -4150,15 +4069,15 @@ class MapSVGMap {
         const new_ratio = width / height;
         const old_ratio = this.svgDefault.viewBox.width / this.svgDefault.viewBox.height;
 
-        const vb = this.svgDefault.viewBox.clone();
+        const vb = $.extend([], this.svgDefault.viewBox);
 
         if (new_ratio != old_ratio) {
             if (new_ratio > old_ratio) {
-                vb.width = this.svgDefault.viewBox.height * new_ratio;
-                vb.x = this.svgDefault.viewBox.x - (vb.width - this.svgDefault.viewBox.width) / 2;
+                vb[2] = this.svgDefault.viewBox.height * new_ratio;
+                vb[0] = this.svgDefault.viewBox.x - (vb[2] - this.svgDefault.viewBox.width) / 2;
             } else {
-                vb.height = this.svgDefault.viewBox.width / new_ratio;
-                vb.y = this.svgDefault.viewBox.y - (vb.height - this.svgDefault.viewBox.height) / 2;
+                vb[3] = this.svgDefault.viewBox.width / new_ratio;
+                vb[1] = this.svgDefault.viewBox.y - (vb[3] - this.svgDefault.viewBox.height) / 2;
             }
         }
 
@@ -4205,7 +4124,6 @@ class MapSVGMap {
         }
         return this.viewBox;
     }
-
     /**
      * Returns geo-bounds of the map.
      * @returns {number[]} - [leftLon, topLat, rightLon, bottomLat]
@@ -4224,30 +4142,12 @@ class MapSVGMap {
 
         return [leftLon, topLat, rightLon, bottomLat];
     }
-
-    private setStrokes() {
-        $(this.containers.svg)
-            .find("path, polygon, circle, ellipse, rect, line, polyline")
-            .each((index, elem) => {
-                const width = MapObject.getComputedStyle("stroke-width", elem);
-                if (width) {
-                    $(elem).attr("data-stroke-width", width.replace("px", ""));
-                }
-            });
-    }
-
     /**
-     * Adjusts stroke thickness on zoom change
+     * Adjusts stroke widths on zoom change to keeps their widths the same on all zoom levels.
      */
-    adjustStrokes(): void {
-        $(this.containers.svg)
-            .find("path, polygon, circle, ellipse, rect, line, polyline")
-            .each((index, elem) => {
-                const width = elem.getAttribute("data-stroke-width");
-                if (width) {
-                    $(elem).css("stroke-width", Number(width) / this.scale);
-                }
-            });
+    mapAdjustStrokes(): void {
+        // TODO add an option to turn on/off non-scaling strokes
+        this.regions.forEach((region) => region.adjustStroke(this.scale));
     }
     /**
      * Zooms-in the map
@@ -4293,46 +4193,9 @@ class MapSVGMap {
         zoomToLevel?: number
     ): boolean {
         // If a single object Marker | Region | Cluster is passed, convert it to array
-        if (mapObjects instanceof Marker || mapObjects instanceof MarkerCluster) {
-            return this.zoomToMarkerOrCluster(mapObjects, zoomToLevel);
-        } else {
-            const convertedObjects = !Array.isArray(mapObjects) ? [mapObjects] : mapObjects;
-            const bbox = this.getGroupBBox(convertedObjects);
-            return this.fitViewBox(bbox, zoomToLevel);
-        }
-    }
-
-    /**
-     * Zooms to a single marker or cluster
-     * @private
-     */
-    zoomToMarkerOrCluster(mapObject: Marker | MarkerCluster, zoomToLevel?: number): boolean {
-        this.zoomLevel = zoomToLevel || 1;
-        const foundZoomLevel = this.zoomLevels.get(this.zoomLevel);
-        if (!foundZoomLevel) {
-            return false;
-        }
-        const vb = foundZoomLevel.viewBox;
-
-        if (this.canZoom) {
-            this.isZooming = true;
-            this.canZoom = false;
-            setTimeout(() => {
-                this.isZooming = false;
-                this.canZoom = true;
-            }, 700);
-            const vbNew = new ViewBox(
-                mapObject.svgPoint.x - vb.width / 2,
-                mapObject.svgPoint.y - vb.height / 2,
-                vb.width,
-                vb.height
-            );
-            this.setViewBox(vbNew);
-            this._scale = foundZoomLevel._scale;
-            return true;
-        }
-
-        return false;
+        const convertedObjects = !Array.isArray(mapObjects) ? [mapObjects] : mapObjects;
+        const bbox = this.getGroupBBox(convertedObjects);
+        return this.fitViewBox(bbox, zoomToLevel);
     }
 
     getGroupBBox(mapObjects: (Marker | Region | MarkerCluster)[]): ViewBox {
@@ -4423,6 +4286,26 @@ class MapSVGMap {
     zoomToRegion(region: Region, zoomToLevel?: number): boolean {
         this.fitViewBox(region.getBBox(), zoomToLevel);
         return true;
+    }
+
+    /**
+     * Zooms to a single marker or cluster
+     * @param mapObject
+     * @param zoomToLevel
+     * @private
+     */
+    zoomToMarkerOrCluster(mapObject: Marker | MarkerCluster, zoomToLevel?: number): void {
+        this.zoomLevel = zoomToLevel || 1;
+        const vb = this.zoomLevels.get(this.zoomLevel).viewBox;
+        const newViewBox = new ViewBox(
+            mapObject.svgPoint.x - vb.width / 2,
+            mapObject.svgPoint.y - vb.height / 2,
+            vb.width,
+            vb.height
+        );
+        this.setViewBox(newViewBox);
+
+        this._scale = this.zoomLevels.get(this.zoomLevel)._scale;
     }
     /**
      * Centers map on Region or Marker.
@@ -4597,7 +4480,6 @@ class MapSVGMap {
     markerAdd(marker): void {
         $(marker.element).hide();
         marker.adjustScreenPosition();
-        // marker.setImage(this.getMarkerImage(marker.object, marker.location), true);
         this.layers.markers.append(marker.element);
         this.markers.push(marker);
         marker.mapped = true;
@@ -4916,7 +4798,7 @@ class MapSVGMap {
      */
     scrollEnd(e: JQuery.TouchEventBase, mapsvg: MapSVGMap, noClick?: boolean): void {
         setTimeout(() => {
-            this.enableAnimation();
+            this.enableTransitions();
             this.scrollStarted = false;
             this.isScrolling = false;
         }, 100);
@@ -5374,11 +5256,11 @@ class MapSVGMap {
 
         var lat = parseFloat(coords[0]);
         var lon = parseFloat(coords[1]);
-        var x = (lon - this.geoViewBox.leftLon) * (this.svgDefault.viewBox.width / this.converter.mapLonDelta);
+        var x = (lon - this.geoViewBox.leftLon) * (this.svgDefault.viewBox.width / this.mapLonDelta);
 
         var lat = lat * 3.14159 / 180;
-        // var worldMapWidth = ((this.svgDefault.width / this.converter.mapLonDelta) * 360) / (2 * 3.14159);
-        var worldMapWidth = ((this.svgDefault.viewBox.width / this.converter.mapLonDelta) * 360) / (2 * 3.14159);
+        // var worldMapWidth = ((this.svgDefault.width / this.mapLonDelta) * 360) / (2 * 3.14159);
+        var worldMapWidth = ((this.svgDefault.viewBox.width / this.mapLonDelta) * 360) / (2 * 3.14159);
         var mapOffsetY = (worldMapWidth / 2 * Math.log((1 + Math.sin(this.mapLatBottomDegree)) / (1 - Math.sin(this.mapLatBottomDegree))));
         var y = this.svgDefault.viewBox.height - ((worldMapWidth / 2 * Math.log((1 + Math.sin(lat)) / (1 - Math.sin(lat)))) - mapOffsetY);
 
@@ -5456,7 +5338,7 @@ class MapSVGMap {
         }
 
         let showPreviousMapButton;
-        if (this.options.actions.region.click.showAnotherMapContainerId !== "undefined") {
+        if (this.options.actions.region.click.region.showAnotherMapContainerId !== "undefined") {
             showPreviousMapButton = false;
         } else {
             showPreviousMapButton = this.options.controls.previousMap;
@@ -5615,7 +5497,6 @@ class MapSVGMap {
     markerClickHandler(e: JQuery.TriggeredEvent, marker: Marker): void {
         this.objectClickedBeforeScroll = null;
         if (this.eventsPreventList["click"]) return;
-
         const actions = this.options.actions;
 
         this.selectMarker(marker);
@@ -5793,7 +5674,6 @@ class MapSVGMap {
         this.locationField = this.objectsRepository.schema.getFieldByType("location");
         // @ts-ignore
         if (
-            this.locationField &&
             this.locationField.markersByFieldEnabled &&
             this.locationField.markerField &&
             Object.values(this.locationField.markersByField).length > 0
@@ -5817,11 +5697,6 @@ class MapSVGMap {
             if (typeof fieldValueOrObject === "object") {
                 // @ts-ignore
                 fieldValue = fieldValueOrObject[this.locationField.markerField];
-                if (this.locationField.markerField === "regions") {
-                    fieldValue = fieldValue[0] && fieldValue[0].id;
-                } else if (typeof fieldValue === "object" && fieldValue.length) {
-                    fieldValue = fieldValue[0].value;
-                }
             } else {
                 fieldValue = fieldValueOrObject;
             }
@@ -5832,8 +5707,8 @@ class MapSVGMap {
             }
         }
 
-        return location && location.imagePath
-            ? location.imagePath
+        return location && location.img
+            ? location.img
             : this.options.defaultMarkerImage
             ? this.options.defaultMarkerImage
             : MapSVG.urls.root + "markers/_pin_default.png";
@@ -6173,8 +6048,9 @@ class MapSVGMap {
 
         $(_this.containers.map).off(".common.mapsvg");
         $(_this.containers.scrollpane).off(".common.mapsvg");
-        $(document).off(".scroll.mapsvg");
-        $(document).off(".scrollInit.mapsvg");
+        $(document).off("keydown.scroll.mapsvg");
+        $(document).off("mousemove.scrollInit.mapsvg");
+        $(document).off("mouseup.scrollInit.mapsvg");
 
         if (_this.editMarkers.on) {
             $(_this.containers.map).on(
@@ -6229,10 +6105,7 @@ class MapSVGMap {
         if (_this.options.scroll.spacebar) {
             $(document).on("keydown.scroll.mapsvg", function (e) {
                 if (
-                    !(
-                        document.activeElement.tagName === "INPUT" &&
-                        $(document.activeElement).attr("type") === "text"
-                    ) &&
+                    document.activeElement.tagName !== "INPUT" &&
                     !_this.isScrolling &&
                     e.keyCode == 32
                 ) {
@@ -6457,16 +6330,12 @@ class MapSVGMap {
         $.extend(true, this.options, { labelsMarkers: options });
 
         if (this.options.labelsMarkers.on) {
-            this.markers.forEach((marker: Marker) => {
+            this.markers.forEach((marker) => {
                 try {
                     marker.setLabel(this.templates.labelMarker(marker.object));
                 } catch (err) {
                     console.error('MapSVG: Error in the "Marker Label" template');
                 }
-            });
-        } else {
-            this.markers.forEach((marker: Marker) => {
-                marker.setLabel("");
             });
         }
     }
@@ -6550,9 +6419,6 @@ class MapSVGMap {
      * Reloads Regions from SVG file
      */
     reloadRegions(): void {
-        // this.regions.forEach(function (r: Region) {
-        //     $(r.element).css({ "stroke-width": r.style["stroke-width"] });
-        // });
         this.regions.clear();
         $(this.containers.svg).find(".mapsvg-region").removeClass("mapsvg-region");
         $(this.containers.svg)
@@ -6564,9 +6430,6 @@ class MapSVGMap {
                 // @ts-ignore
                 const elem = <SVGElement>element;
                 if ($(elem).closest("defs").length) return;
-                if (elem.getAttribute("data-stroke-width")) {
-                    elem.style["stroke-width"] = elem.getAttribute("data-stroke-width");
-                }
                 if (elem.getAttribute("id")) {
                     if (
                         !this.options.regionPrefix ||
@@ -6596,19 +6459,9 @@ class MapSVGMap {
             } else {
                 if (
                     this.options.filters.filteredRegionsStatus ||
-                    this.options.filters.filteredRegionsStatus === 0 ||
-                    (this.options.menu.source === "regions" &&
-                        this.options.menu.filterout &&
-                        this.options.menu.filterout.field === "status" &&
-                        this.options.menu.filterout.val) ||
-                    this.options.menu.filterout.val === 0
+                    this.options.filters.filteredRegionsStatus === 0
                 ) {
-                    const status =
-                        this.options.filters.filteredRegionsStatus ||
-                        this.options.filters.filteredRegionsStatus === 0
-                            ? this.options.filters.filteredRegionsStatus
-                            : this.options.menu.filterout.val;
-                    region.setStatus(status);
+                    region.setStatus(this.options.filters.filteredRegionsStatus);
                 }
             }
         });
@@ -6629,37 +6482,24 @@ class MapSVGMap {
     fixMarkersWorldScreen(): void {
         if (this.googleMaps.map)
             setTimeout(() => {
-                const markers = { left: 0, right: 0, leftOut: 0, rightOut: 0 };
+                const markers = { left: 0, right: 0 };
                 if (this.markers.length > 1) {
-                    this.markers.forEach((m: Marker) => {
+                    this.markers.forEach((m) => {
                         if (
-                            $(m.element).offset().left <
+                            m.node.offset().left <
                             $(this.containers.map).offset().left +
                                 this.containers.map.clientWidth / 2
                         ) {
                             markers.left++;
-                            if ($(m.element).offset().left < $(this.containers.map).offset().left) {
-                                markers.leftOut++;
-                            }
                         } else {
                             markers.right++;
-                            if (
-                                $(m.element).offset().left >
-                                $(this.containers.map).offset().left +
-                                    this.containers.map.clientWidth
-                            ) {
-                                markers.rightOut++;
-                            }
                         }
                     });
 
-                    if (
-                        (markers.left === 0 && markers.rightOut) ||
-                        (markers.right === 0 && markers.leftOut)
-                    ) {
+                    if (markers.left === 0 || markers.right === 0) {
                         const k = markers.left === 0 ? 1 : -1;
                         const ww =
-                            (this.svgDefault.viewBox.width / this.converter.mapLonDelta) *
+                            (this.svgDefault.viewBox.width / this.mapLonDelta) *
                             360 *
                             this.getScale();
                         this.googleMaps.map.panBy(k * ww, 0);
@@ -6744,22 +6584,14 @@ class MapSVGMap {
      * @private
      */
     init(): MapSVGMap {
-        MapSVG.addInstance(this);
-
         if (this.options.source === "") {
             throw new Error("MapSVG: please provide SVG file source.");
         }
 
-        this.disableAnimation();
+        this.disableCssAnimations();
 
         this.setEvents(this.options.events);
         this.events.trigger("beforeLoad");
-
-        // TODO load only when filters are on
-        this.loadGoogleMapsAPI(
-            () => {},
-            () => {}
-        );
 
         this.containers.map.classList.add("mapsvg");
 
@@ -6836,7 +6668,6 @@ class MapSVGMap {
         svgTag.removeAttr("width");
         svgTag.removeAttr("height");
         $(this.containers.scrollpane).append(svgTag);
-        this.setStrokes();
 
         this.reloadRegions();
 
@@ -6871,7 +6702,6 @@ class MapSVGMap {
             this.showLoadingMessage();
         });
         this.objectsRepository.events.on("loaded", () => {
-            this.setGlobalDistanceFilter();
             this.fitOnDataLoadDone = false;
             this.addLocations();
             this.fixMarkersWorldScreen();
@@ -6895,7 +6725,7 @@ class MapSVGMap {
                 this.controllers.filters.setFiltersCounter();
             }
             this.hideLoadingMessage();
-            this.events.trigger("databaseLoaded");
+            this.events.trigger("dataLoaded");
 
             this.updateFiltersState();
             this.setChoropleth();
@@ -6958,45 +6788,31 @@ class MapSVGMap {
 
         this.setEventHandlers();
 
-        // The initial map loading process is finished, remove the first afterLoad blocker
-        this.afterLoadBlockers--;
-
         if (!this.id) {
             this.finalizeMapLoading();
             return;
         }
 
-        if (!this.options.data_regions) {
-            this.regionsRepository.find().done((data) => {
-                this.afterLoadBlockers--;
-                this.finalizeMapLoading();
+        if (!this.options.data_regions || !this.options.data_objects) {
+            this.regionsRepository.find({ withSchema: true }).done((regions) => {
+                if (this.options.database.loadOnStart || this.editMode) {
+                    this.objectsRepository.find({ withSchema: true }).done((data) => {
+                        this.finalizeMapLoading();
+                    });
+                } else {
+                    this.finalizeMapLoading();
+                }
             });
         } else {
             this.regionsRepository.loadDataFromResponse(this.options.data_regions);
-            this.afterLoadBlockers--;
-        }
-
-        if (!this.options.data_objects) {
-            if (this.options.database.loadOnStart || this.editMode) {
-                this.objectsRepository.find().done((data) => {
-                    this.afterLoadBlockers--;
-                    this.finalizeMapLoading();
-                });
-            } else {
-                this.afterLoadBlockers--;
-                this.finalizeMapLoading();
-            }
-        } else {
             if (this.editMode || this.options.database.loadOnStart) {
                 this.objectsRepository.loadDataFromResponse(this.options.data_objects);
-                this.afterLoadBlockers--;
-            } else {
-                this.afterLoadBlockers--;
             }
             delete this.options.data_regions;
             delete this.options.data_objects;
-            this.finalizeMapLoading();
         }
+
+        this.finalizeMapLoading();
     }
 
     private getGeoViewBoxFromSvgTag(svgTag: SVGSVGElement): GeoViewBox | null {
@@ -7082,10 +6898,10 @@ class MapSVGMap {
         $(this.containers.loading).show();
     }
 
-    private disableAnimation() {
+    private disableCssAnimations() {
         this.containers.map.classList.add("no-transitions");
     }
-    private enableAnimation() {
+    private enableTransitions() {
         $(this.containers.map).removeClass("no-transitions");
     }
 
@@ -7112,7 +6928,10 @@ class MapSVGMap {
      * @private
      */
     finalizeMapLoading(): void {
-        if (this.afterLoadBlockers > 0 || this.loaded) {
+        if (this.options.googleMaps.on && !this.googleMaps.map) {
+            this.events.on("googleMapsLoaded", () => {
+                this.finalizeMapLoading();
+            });
             return;
         }
 
@@ -7120,16 +6939,17 @@ class MapSVGMap {
 
         setTimeout(() => {
             this.movingItemsAdjustScreenPosition();
-            this.adjustStrokes();
+            this.mapAdjustStrokes();
             setTimeout(() => {
                 this.hideLoadingMessage();
                 $(this.containers.loading).find(".mapsvg-loading-text").hide();
-                this.enableAnimation();
+                this.enableTransitions();
             }, 200);
         }, 100);
 
-        this.loaded = true;
         this.events.trigger("afterLoad");
+
+        MapSVG.addInstance(this);
     }
 
     private selectRegionByIdFromUrl() {

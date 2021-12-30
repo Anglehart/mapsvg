@@ -10,6 +10,14 @@
         <input type="text"  disabled="disabled" class="form-control" name="name" value="location" autocomplete="off" />
     </div>
 
+    <div class="form-group mb-3 ">
+        <label class="form-label">Language of addresses</label>
+        <select class="mapsvg-select2 form-control" name="language" style="text-transform: capitalize;">
+            <option>...</option>
+            {{#each languages}}<option {{#ifeq value ../language}}selected{{/ifeq}} value="{{value}}">{{label}}</option>{{/each}}
+        </select>
+    </div>
+
     <div class="form-group mb-3">
         <label class="form-label">Markers</label>
 
@@ -34,16 +42,17 @@
     <div class="form-group mb-3">
         <label class="form-label">Markers by field value</label>
 
-        <div style="margin-bottom: 20px;" class="form-switch form-switch-md">
-            <input type="checkbox" class="form-check-input" name="markersByFieldEnabled" {{#if markersByFieldEnabled}}checked{{/if}} />
+        <div style="margin-bottom: 20px;" class="form-check form-switch form-switch-md">
+            <input type="checkbox" class="form-check-input" name="markersByFieldEnabled"  {{#if external.markersByFieldEnabled}}checked{{/if}} />
         </div>
+
         <select class="form-control mapsvg-select2" name="markerField" data-live="change">
             <option value="">Choose a field...</option>
             {{#if external.databaseFieldsFilterableShort}}
-                {{#each external.databaseFieldsFilterableShort}}
+    {{#each external.databaseFieldsFilterableShort}}
                     <option {{#ifeq ../markerField this}}selected{{/ifeq}}>{{this}}</option>
                 {{/each}}
-            {{/if}}
+{{/if}}
         </select>
         <p class="form-text">Choose a field that you want to connect to marker images</p>
 
@@ -54,7 +63,7 @@
 
     <div class="form-group mb-3 ">
         <label class="col-form-label">Searchable</label>
-        <div class="form-switch form-switch-md">
+        <div class="form-check form-switch form-switch-md">
             <input type="checkbox" class="form-check-input" name="searchable"  {{#if searchable}}checked{{/if}} />
         </div>
         <p class="form-text">Choose if you want to perform a text search on this field. Please note that
@@ -63,6 +72,6 @@
 
     </div>
     <div class="form-group mb-3 ">
-        <button class="btn btn-outline-secondary  mapsvg-remove"><i class="mfa mfa-trash"></i> Remove</button>
+        <button class="btn btn-outline-secondary  mapsvg-remove"><i class="fa fa-trash"></i> Remove</button>
     </div>
 </script>

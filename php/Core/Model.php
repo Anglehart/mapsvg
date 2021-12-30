@@ -10,7 +10,7 @@ class Model implements \JsonSerializable {
 
 	public $id;
     //public $status;
-    public function __construct( $data) {
+    public function __construct(array $data) {
         $this->update((array)$data);
     }
 
@@ -21,7 +21,7 @@ class Model implements \JsonSerializable {
 	 * @param array $params
 	 * @return $this
 	 */
-	public function update($params)
+	public function update(array $params)
 	{
 		foreach($params as $paramName => $options){
 			$methodName = 'set'.ucfirst($paramName);

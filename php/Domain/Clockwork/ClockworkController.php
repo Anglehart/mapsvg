@@ -10,6 +10,6 @@ namespace MapSVG;
 class ClockworkController extends Controller {
 
 	public static function index($request) {
-		return new \WP_REST_Response(Logger::getMetaData($request['params']));
+		return new \WP_REST_Response(Logger::getMetaData($request['id']));
 	}
 }

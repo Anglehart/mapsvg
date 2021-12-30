@@ -12,7 +12,6 @@ export class MapsRepository extends Repository {
             data.options = data.options.replace(/table/g, "!mapsvg-encoded-tbl");
             data.options = data.options.replace(/database/g, "!mapsvg-encoded-db");
             data.options = data.options.replace(/varchar/g, "!mapsvg-encoded-vc");
-            data.options = data.options.replace(/int\(11\)/g, "!mapsvg-encoded-int");
         }
         if (typeof params.title !== "undefined") {
             data.title = params.title;

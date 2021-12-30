@@ -4,9 +4,6 @@
     jQuery(document).ready(function () {
         mapsvg.globals.version = '<?php echo $data['mapsvgVersion'] ?>';
         mapsvg.globals.svgFiles = <?php echo json_encode($data['svgFiles'])?>;
-        mapsvg.globals.options = <?php echo json_encode($data['options'])?>;
-        mapsvg.globals.userIsAdmin = <?php echo current_user_can("create_users") ? "true" : "false" ?>;
-        mapsvg.globals.accessGranted = <?php echo $data["accessGranted"] ?>;
         //mapsvg.globals.nonce = '<?php //echo wp_create_nonce('mapsvg')?>//';
         mapsvg.globals.admin = jQuery().mapsvgadmin('init', {
             map: <?php echo json_encode($data['map']);?>,

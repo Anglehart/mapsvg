@@ -26,14 +26,9 @@ export class CheckboxesFormElement extends FormElement {
         });
     }
     setInputValue(values) {
-        if (values === null) {
-            $(this.domElements.main).find(`input`).prop("checked", false);
-        }
-        else {
-            values.forEach((value) => {
-                $(this.domElements.main).find(`input[value="${value}"]`).prop("checked", true);
-            });
-        }
+        values.forEach((value) => {
+            $(this.domElements.main).find(`input[value="${value}"]`).prop("checked", true);
+        });
     }
 }
 //# sourceMappingURL=CheckboxesFormElement.js.map

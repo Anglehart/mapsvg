@@ -27,9 +27,6 @@ export class SVGPoint {
         this.x = _x;
         this.y = _y;
     }
-    toString() {
-        return this.x + "," + this.y;
-    }
 }
 export class GeoPoint {
     constructor(lat, lng) {
@@ -52,18 +49,12 @@ export class GeoPoint {
         this.lat = _lat;
         this.lng = _lng;
     }
-    toString() {
-        return this.lat + "," + this.lng;
-    }
 }
 export class Location {
     constructor(options) {
         this.update(options);
     }
     update(options) {
-        if (options.object) {
-            this.setObject(options.object);
-        }
         if (options.img) {
             this.setImage(options.img);
         }
@@ -77,9 +68,6 @@ export class Location {
             this.setGeoPoint(options.geoPoint);
         }
     }
-    setObject(object) {
-        this.object = object;
-    }
     setImage(imgUrl) {
         if (typeof imgUrl !== "string") {
             return;
@@ -90,7 +78,9 @@ export class Location {
         }
         this.img = src;
         this.imagePath = this.getImageUrl();
-        this.marker && this.marker && this.marker.setImage(this.imagePath);
+        if (this.marker && this.marker.src !== this.imagePath) {
+            this.marker.setImage(this.imagePath);
+        }
     }
     getImageUrl() {
         if (this.img && this.img.indexOf("uploads/") === 0) {
@@ -115,7 +105,7 @@ export class Location {
             this.marker.setSvgPointFromLocation();
         }
     }
-    getMarkerImage() {
+    getMarkerImageUrl() {
         if (this.img && this.img.indexOf("uploads/") === 0) {
             return MapSVG.urls.uploads + "markers/" + this.img.replace("uploads/", "");
         }
@@ -127,9 +117,6 @@ export class Location {
         const data = {
             img: this.img,
             imagePath: this.imagePath,
-            markerImagePath: this.marker && this.marker.object
-                ? this.marker.object.getMarkerImage()
-                : this.imagePath,
             address: this.address,
         };
         if (this.geoPoint) {

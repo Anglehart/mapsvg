@@ -4,9 +4,7 @@ const $ = jQuery;
 export class SearchFormElement extends FormElement {
     constructor(options, formBuilder, external) {
         super(options, formBuilder, external);
-        this.searchFallback = MapSVG.parseBoolean(options.searchFallback) || false;
-        this.width = options.width || "100%";
-        this.name = "search";
+        this.searchType = options.searchType || "fulltext";
     }
     setDomElements() {
         super.setDomElements();
@@ -19,13 +17,11 @@ export class SearchFormElement extends FormElement {
             this.triggerChanged();
         });
     }
-    setInputValue(value) {
-        this.inputs.text.value = value;
-    }
     getSchema() {
         const schema = super.getSchema();
         schema.searchFallback = MapSVG.parseBoolean(this.searchFallback);
         schema.placeholder = this.placeholder;
+        schema.noResultsText = this.noResultsText;
         schema.width = this.width;
         return schema;
     }

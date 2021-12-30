@@ -100,7 +100,7 @@ export class FormElement {
                         options: options,
                     };
                 }
-                else if (fieldName === "title") {
+                else if (fieldName == "region_title") {
                     const options = [];
                     _this.formBuilder.mapsvg.regions.forEach(function (r) {
                         options.push({ label: r.title, value: r.title });
@@ -113,20 +113,18 @@ export class FormElement {
                         .getField(fieldName);
                 }
             }
-            if ((field && field.options) || fieldName === "regions") {
+            if (field && field.options) {
                 let options;
                 if (fieldName == "regions") {
-                    const _options = _this.formBuilder.mapsvg.regions.map((r) => {
-                        return { id: r.id, title: r.title };
-                    });
-                    _options.sort(function (a, b) {
-                        if (a.title < b.title)
-                            return -1;
-                        if (a.title > b.title)
-                            return 1;
-                        return 0;
-                    });
-                    options = _options.map(function (o) {
+                    if (field.options[0].title && field.options[0].title.length)
+                        field.options.sort(function (a, b) {
+                            if (a.title < b.title)
+                                return -1;
+                            if (a.title > b.title)
+                                return 1;
+                            return 0;
+                        });
+                    options = field.options.map(function (o) {
                         return (o.title || o.id) + ":" + o.id;
                     });
                 }
@@ -376,12 +374,10 @@ export class FormElement {
                 });
             }
         }
-    }
-    redrawEditor() {
         if (this.domElements.edit) {
             $(this.domElements.edit).empty();
             $(this.domElements.edit).html("<div>" + this.templates.edit(this.getDataForTemplate()) + "</div>");
-            this.initEditor();
+            _this.initEditor();
         }
     }
     setOptions(options) {

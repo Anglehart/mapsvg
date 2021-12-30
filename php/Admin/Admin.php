@@ -13,6 +13,7 @@ class Admin
     public function __construct()
     {
         $this->addHooks();
+        $this->checkPurchaseCode();
     }
 
     private function addHooks()
@@ -22,6 +23,28 @@ class Admin
         add_action('admin_enqueue_scripts', '\MapSVG\Admin::addJsCss', 0);
         add_action('wp_ajax_mapsvg_get_maps', array($this, 'ajax_mapsvg_get_maps'));
         add_action( 'admin_enqueue_scripts', array($this, 'enqueueGutenberg'));
+    }
+
+    public function checkPurchaseCode()
+    {
+        $mapsvg_purchase_code = Options::get('purchase_code');
+        if (!empty($mapsvg_purchase_code)) {
+            require MAPSVG_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'php/Vendor/plugin-update-checker/plugin-update-checker.php';
+            $myUpdateChecker = \Puc_v4_Factory::buildUpdateChecker(
+                'https://mapsvg.com/wp-updates/?action=info',
+                __FILE__, //Full path to the main plugin file or functions.php.
+                'mapsvg'
+            );
+            //Add the license key to query arguments.
+            $myUpdateChecker->addQueryArgFilter(array($this, 'filterUpdateChecks'));
+        }
+    }
+
+    function filterUpdateChecks($queryArgs)
+    {
+        global $mapsvg_purchase_code;
+        $queryArgs['purchase_code'] = $mapsvg_purchase_code;
+        return $queryArgs;
     }
 
     /**
@@ -136,8 +159,8 @@ class Admin
             wp_register_style('bootstrap', MAPSVG_PLUGIN_URL . "js/vendor/bootstrap/bootstrap.min.css", null, '5.0.0');
             wp_enqueue_style('bootstrap');
 
-            wp_register_style('mapsvg-fontawesome', MAPSVG_PLUGIN_URL . "css/font-awesome/font-awesome.min.css", null, '4.4.0-mfa');
-            wp_enqueue_style('mapsvg-fontawesome');
+            wp_register_style('fontawesome', MAPSVG_PLUGIN_URL . "css/font-awesome/font-awesome.min.css", null, '4.4.0-mfa');
+            wp_enqueue_style('fontawesome');
 
             wp_register_script('bootstrap-colorpicker', MAPSVG_PLUGIN_URL . 'js/vendor/bootstrap-colorpicker/bootstrap-colorpicker.min.js');
             wp_enqueue_script('bootstrap-colorpicker');
@@ -255,7 +278,7 @@ class Admin
         wp_register_script('bloodhound', MAPSVG_PLUGIN_URL . 'js/vendor/typeahead/bloodhound.js', null, '0.11.1');
         wp_enqueue_script('bloodhound');
 
-        wp_register_script('handlebars', MAPSVG_PLUGIN_URL . 'js/vendor/handlebars/handlebars.min.js', null, '4.7.7');
+        wp_register_script('handlebars', MAPSVG_PLUGIN_URL . 'js/vendor/handlebars/handlebars-standalone.js', null, '4.0.2');
         wp_enqueue_script('handlebars');
         wp_enqueue_script('handlebars-helpers', MAPSVG_PLUGIN_URL . 'js/vendor/handlebars/handlebars-helpers.js', null, MAPSVG_ASSET_VERSION);
 
@@ -267,12 +290,10 @@ class Admin
         wp_register_script('mapsvg', MAPSVG_PLUGIN_URL . 'dist/mapsvg-front.umd.js', $mapsvgDeps, MAPSVG_ASSET_VERSION);
 
         wp_localize_script('mapsvg', 'mapsvg_paths', array(
-            'root' => MAPSVG_PLUGIN_RELATIVE_URL,
-            'api' => get_rest_url(null, 'mapsvg/v1/'),
-            'templates' => MAPSVG_PLUGIN_RELATIVE_URL . 'js/mapsvg-admin/templates/',
+            'root' => MAPSVG_PLUGIN_PATH,
+            'templates' => MAPSVG_PLUGIN_PATH . 'js/mapsvg-admin/templates/',
             'maps' => parse_url(MAPSVG_MAPS_URL, PHP_URL_PATH),
-            'uploads' => parse_url(MAPSVG_UPLOADS_URL, PHP_URL_PATH),
-            'home' => parse_url(home_url(), PHP_URL_PATH) ? parse_url(home_url(), PHP_URL_PATH) : '',
+            'uploads' => parse_url(MAPSVG_MAPS_UPLOADS_URL, PHP_URL_PATH)
         ));
         wp_localize_script('mapsvg', 'mapsvg_ini_vars', array(
             'post_max_size' => ini_get('post_max_size'),
@@ -323,10 +344,10 @@ class Admin
         wp_register_style('fontawesome', MAPSVG_PLUGIN_URL . "css/font-awesome/font-awesome.min.css", null, '4.4.0');
         wp_enqueue_style('fontawesome');
 
-//        wp_enqueue_style(
-//            'mapsvg-main-css',
-//            MAPSVG_PLUGIN_URL.'css/mapsvg-admin.css'
-//        );
+        wp_enqueue_style(
+            'mapsvg-main-css',
+            MAPSVG_PLUGIN_URL.'css/mapsvg-admin.css'
+        );
         wp_enqueue_style(
             'mapsvg-gutenberg-css',
             MAPSVG_PLUGIN_URL.'css/mapsvg-gutenberg.css'
@@ -373,9 +394,6 @@ class Admin
             Options::set('seen_whats_new', 1);
         }
 
-
-        $options["mapsvg_login_keys"] = null;
-
         $templateData = array(
             'page' => 'index',
             'svgFiles' => $svgRepo->find(),
@@ -385,8 +403,7 @@ class Admin
             'options' => Options::getAll(),
             'postTypes' => $post_types,
             'seenWhatsNew' => $seenWhatsNew,
-            'whatsNew' => isset($whatsNew) ?  $whatsNew : '',
-            'accessGranted' => (Options::get("mapsvg_login_keys") && (count(Options::get("mapsvg_login_keys")) > 0)) ? "true" : "false"
+            'whatsNew' => isset($whatsNew) ?  $whatsNew : ''
         );
 
         if (defined('PHP_VERSION_ERROR')) {
@@ -398,39 +415,17 @@ class Admin
 
     public function edit($request)
     {
+
         $templateData = array();
         $mapsRepo = new MapsRepository();
         $map = $mapsRepo->findById($request['map_id']);
 
-        // If table or schema doesn't exists, fix that
-        if(!$map->regions->hasTable()){
-            if($map->regions->hasSchema()){
-                $map->regions = RegionsRepository::createRepository($map->regions->getSchema()->getData());
-            } else {
-                $map->regions = RegionsRepository::createRepository('regions_' . $map->id);
-            }
-            $map->setRegionsTable();
-        }
-
-        if(!$map->objects->hasTable()){
-            if($map->objects->hasSchema()){
-                $map->objects = ObjectsRepository::createRepository($map->objects->getSchema()->getData());
-            } else {
-                $map->regions = ObjectsRepository::createRepository('objects_' . $map->id);
-            }
-        }
-
-//        $map->regions->loadSchema();
-//        $map->objects->loadSchema();
-
-        if($map->optionsBroken && isset($_GET["fix"])){
-            $upgrader = new Upgrade();
-            $upgrader->v6FixMap($map);
-            $map = $mapsRepo->findById($request['map_id']);
-        }
-
         $updater = new MapUpdater();
         $updater->maybeUpdate($map);
+
+//			if(version_compare($map->version, '3.0.0', '<')){
+//				return mapsvg_conf_2();
+//			}
 
         if (empty($map->title)) {
             $map->setTitle('New map');
@@ -439,11 +434,8 @@ class Admin
         $markersRepo = new MarkersRepository();
         $markerImages = $markersRepo->find();
 
-        $map->withObjects();
-        $map->withRegions();
+        $map->withData();
         $map->withSchema();
-
-
 
         $db = Database::get();
 
@@ -457,8 +449,6 @@ class Admin
         // Load the list of available SVG files
         $svgRepo = new SVGFileRepository();
 
-        $options["mapsvg_login_keys"] = null;
-
         $templateData = array(
             'page' => 'edit',
             'map' => $map,
@@ -469,11 +459,8 @@ class Admin
             'mapsvg_version' => MAPSVG_VERSION,
             'fulltext_min_word' => $fulltext_min_word,
             'options' => $options,
-            'postTypes' => $post_types,
-            'userIsAdmin' => current_user_can("create_users") ? "true" : "false",
-            'accessGranted' => (Options::get("mapsvg_login_keys") && (count(Options::get("mapsvg_login_keys")) > 0)) ? "true" : "false"
-
-    );
+            'postTypes' => $post_types
+        );
 
         if (defined('PHP_VERSION_ERROR')) {
             $templateData['mapsvg_error'] = PHP_VERSION_ERROR;
@@ -487,7 +474,6 @@ class Admin
         include(__DIR__ . DIRECTORY_SEPARATOR . ucfirst($page) . DIRECTORY_SEPARATOR . 'header.inc');
         include(__DIR__ . DIRECTORY_SEPARATOR . ucfirst($page) . DIRECTORY_SEPARATOR . 'body.inc');
         include(__DIR__ . DIRECTORY_SEPARATOR . ucfirst($page) . DIRECTORY_SEPARATOR . 'footer.inc');
-        include(__DIR__ . DIRECTORY_SEPARATOR . "Common" . DIRECTORY_SEPARATOR . 'support_modal.inc');
     }
 
     /**
@@ -538,6 +524,4 @@ class Admin
         $post_types[] = 'page';
         return $post_types;
     }
-
-
 }

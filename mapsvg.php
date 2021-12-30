@@ -5,9 +5,8 @@ Plugin URI: http://codecanyon.net/item/mapsvg-interactive-vector-maps/2547255?re
 Description: Interactive Vector Maps (SVG), Google maps, Image maps.
 Author: Roman S. Stepanov
 Author URI: http://codecanyon.net/user/RomanCode
-Version: 6.2.12
+Version: 6.0.1
 */
-
 namespace MapSVG;
 
 include 'php/Autoloader.php';
@@ -33,7 +32,6 @@ if(!defined('MAPSVG_DEBUG')){
 }
 if(MAPSVG_DEBUG){
     include 'vendor/autoload.php';
-    error_reporting(E_ALL);
 }
 
 /**
@@ -80,14 +78,14 @@ define('MAPSVG_INFO', 'INFO');
 define('MAPSVG_ERROR', 'ERROR');
 
 /** MapSVG version number */
-define('MAPSVG_VERSION', '6.2.12');
+define('MAPSVG_VERSION', '6.0.1');
 
 /** MapSVG plugin URL */
 define('MAPSVG_PLUGIN_URL', $plugin_dir_url);
 
 /** MapSVG plugin relative URL without domain */
 $parts = parse_url(MAPSVG_PLUGIN_URL);
-define('MAPSVG_PLUGIN_RELATIVE_URL', $parts['path']);
+define('MAPSVG_PLUGIN_PATH', $parts['path']);
 
 /** MapSVG plugin dir */
 define('MAPSVG_PLUGIN_DIR', str_replace(['\\', '/'], DIRECTORY_SEPARATOR, realpath(plugin_dir_path( __FILE__ ))));
@@ -96,10 +94,10 @@ define('MAPSVG_PLUGIN_DIR', str_replace(['\\', '/'], DIRECTORY_SEPARATOR, realpa
 define('MAPSVG_MAPS_DIR', realpath(MAPSVG_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'maps'));
 
 /** Maps uploads dir */
-define('MAPSVG_UPLOADS_DIR', $upload_dir['basedir'] . DIRECTORY_SEPARATOR. 'mapsvg');
+define('MAPSVG_MAPS_UPLOADS_DIR', $upload_dir['basedir'] . DIRECTORY_SEPARATOR. 'mapsvg');
 
 /** Maps uploads URL */
-define('MAPSVG_UPLOADS_URL', $upload_dir['baseurl'] . '/mapsvg/');
+define('MAPSVG_MAPS_UPLOADS_URL', $upload_dir['baseurl'] . '/mapsvg/');
 
 define('MAPSVG_MAPS_URL', MAPSVG_PLUGIN_URL . 'maps/');
 
@@ -121,9 +119,6 @@ define('MAPSVG_PREFIX',  'mapsvg6_');
 // If the map version is between of these numbers it needs to be upgraded.
 define('MAPSVG_INCOMPATIBLE_VERSIONS',  '2.0.0 3.2.0 5.0.0 6.0.0');
 
-if(MAPSVG_DEBUG){
-    Logger::init();
-}
 
 
 /**
@@ -132,50 +127,21 @@ if(MAPSVG_DEBUG){
  */
 class MapSVG {
 
-    private $mapsvgPurchaseCode;
-
     public function __construct(){
-    }
-
-    /**
-     * Check purchase code and enable updates
-     */
-    function checkUpdates(){
-        $this->mapsvgPurchaseCode = Options::get('purchase_code');
-        if($this->mapsvgPurchaseCode){
-            require MAPSVG_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'php/Vendor/plugin-update-checker/plugin-update-checker.php';
-            $myUpdateChecker = \Puc_v4_Factory::buildUpdateChecker(
-                'https://mapsvg.com/wp-updates/?action=info',
-                __FILE__, //Full path to the main plugin file or functions.php.
-                'mapsvg'
-            );
-            //Add the license key to query arguments.
-            $myUpdateChecker->addQueryArgFilter(array($this, 'filterUpdateChecks'));
-        }
-    }
-    function filterUpdateChecks($queryArgs){
-        $queryArgs['purchase_code'] = $this->mapsvgPurchaseCode;
-        return $queryArgs;
-    }
-
-
-	public function run(){
-
         if($this->isPhpVersionOk() && MAPSVG_DEBUG){
             Logger::init();
         }
+    }
+
+	public function run(){
 
         if (defined("PHP_VERSION_ERROR")){
             add_action('admin_menu', array($this, 'addErrorPage'));
             return;
         }
 
-        if(is_admin()){
-            $upgrader = new Upgrade();
-            $upgrader->updateDbCheck();
-        }
-
-        $this->checkUpdates();
+        $upgrader = new Upgrade();
+        $upgrader->updateDbCheck();
 
         $router = new Router();
 

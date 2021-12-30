@@ -120,7 +120,7 @@ export class ImagesFormElement extends FormElement {
                     .data("image", image);
                 const imgContainer = $('<div class="mapsvg-thumbnail-wrap"></div>').data("image", image);
                 imgContainer.append(img);
-                imgContainer.append('<i class="mfa mfa-times  mapsvg-image-delete"></i>');
+                imgContainer.append('<i class="fa fa-times  mapsvg-image-delete"></i>');
                 imageDOM.append(imgContainer);
             });
         $(this.domElements.main).find("input").val(this.value);

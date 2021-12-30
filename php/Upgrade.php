@@ -5,13 +5,9 @@ namespace MapSVG;
 class Upgrade {
 
 	private $db;
-	private $mapsRepo;
-	private $forceV6Reload;
 
-	public function __construct($options = array()) {
+	public function __construct() {
 		$this->db = Database::get();
-		$this->forceV6Reload = isset($options['forceV6Reload']) ? (bool)$options['forceV6Reload'] :
-            (isset($_GET['reload_v6']) ? (bool)$_GET['reload_v6'] : false);
 		$this->charset = "default character set utf8\ncollate utf8_unicode_ci";
 
     }
@@ -19,8 +15,8 @@ class Upgrade {
     public function upgradeMapToV6(){
         $this->v6AddR2oTable();
         $this->v6AddSettingsTable();
-        $this->v6UpgradeSchemaTable();
         $this->v6AddMapsTable();
+        $this->v6UpgradeSchemaTable();
         $this->copyDbAndRegionsTables();
         $this->v6RenameFields();
     }
@@ -225,38 +221,36 @@ class Upgrade {
             $dbVersion = '1.0.0';
 		}
 
-		if(is_admin() && $this->forceV6Reload){
-            $dbVersion = '1.0.0';
-        }
-
 		if(version_compare($dbVersion, MAPSVG_VERSION, '<')) {
-//			if(version_compare($dbVersion, '3.0.0', '<')) {
-//                $this->upgradeMapToV3();
-//            }
+			if(version_compare($dbVersion, '3.0.0', '<')) {
+                $this->upgradeMapToV3();
+            }
 			if(version_compare($dbVersion, '6.0.0', '<')) {
                 $this->upgradeMapToV6();
             }
 			Options::set('db_version', MAPSVG_VERSION);
 		}
-
-		if(isset($_GET['reload_r2o'])){
-            $this->reloadR2o();
-        }
 	}
 
 	private function fixThingsBrokenByV6Release(){
 	    $this->db->query("ALTER TABLE ".$this->db->prefix."mapsvg_schema CHANGE `name` `table_name` varchar(255)");
-	    $this->db->query("UPDATE ".$this->db->prefix."mapsvg_schema SET table_name = CONCAT('".$this->db->prefix."mapsvg_',table_name) WHERE table_name NOT LIKE '%mapsvg_%'");
+	    $this->db->query("UPDATE ".$this->db->prefix."mapsvg_schema SET table_name = CONCAT('".$this->db->prefix."mapsvg_',table_name)");
 	    $this->db->query("DROP TABLE ".$this->db->prefix."mapsvg_settings");
 	    $this->db->query("DROP TABLE ".$this->db->prefix."mapsvg_r2o");
 	    $this->db->query("DROP TABLE ".$this->db->prefix."mapsvg_maps");
-        $tables = $this->db->get_results("SHOW TABLES LIKE '".$this->db->prefix."mapsvg_regions_%'");
+        $tables = $this->db->get_results('SHOW TABLES LIKE \'%mapsvg_regions_%\'');
         if(!empty($tables)) foreach ($tables as $tableName){
             $name = array_values(get_object_vars($tableName));
             $tableName = $name[0];
             $this->db->query("ALTER TABLE ".$tableName." ADD `region_title` varchar(255)");
         }
-        $tables = $this->db->get_results("SHOW TABLES LIKE '".$this->db->prefix."mapsvg_objects_%'");
+        $tables = $this->db->get_results('SHOW TABLES LIKE \'%mapsvg_regions_%\'');
+        if(!empty($tables)) foreach ($tables as $tableName){
+            $name = array_values(get_object_vars($tableName));
+            $tableName = $name[0];
+            $this->db->query("ALTER TABLE ".$tableName." ADD `region_title` varchar(255)");
+        }
+        $tables = $this->db->get_results('SHOW TABLES LIKE \'%mapsvg_objects_%\'');
         if(!empty($tables)) foreach ($tables as $tableName){
             $name = array_values(get_object_vars($tableName));
             $tableName = $name[0];
@@ -267,6 +261,7 @@ class Upgrade {
             $this->db->query("DELETE FROM ".$this->db->prefix."mapsvg_schema WHERE table_name = 'regions_".$id."'");
             $this->db->query("DROP TABLE ".$this->db->prefix."mapsvg_regions_".$id);
         }
+
     }
 
 
@@ -281,7 +276,7 @@ class Upgrade {
 			"db_type" => "int(11)",
 			"visible" => true,
 			"protected" => true,
-			"searchable" => false
+			"searchable" => true
         ];
 
 	    $regionIdField = [
@@ -304,10 +299,6 @@ class Upgrade {
 	    ];
 
         foreach($schemas as $schema) {
-            $tableExists = $this->db->get_var("SHOW TABLES LIKE '".$this->db->mapsvg_prefix . $schema->name."'");
-            if(!$tableExists){
-                continue;
-            }
         	$postField = $schema->getField("post_id");
         	if($postField){
 		        $schema->renameField('post_id', 'post');
@@ -328,10 +319,7 @@ class Upgrade {
                 if(!$idField) {
                     $schema->addField($regionIdField, true);
                 }
-                $regionTitleColExists = $this->db->get_results('SHOW COLUMNS FROM `'.$this->db->mapsvg_prefix . $schema->name.'` LIKE \'region_title\';');
-                if(!empty($regionTitleColExists)){
-                    $this->db->query('ALTER TABLE ' . $this->db->mapsvg_prefix . $schema->name.' CHANGE `region_title` `title` varchar(255)');
-                }
+	            $this->db->query('ALTER TABLE ' . $this->db->mapsvg_prefix . $schema->name.' CHANGE `region_title` `title` varchar(255)');
             }
             $schemasRepo->update($schema, true);
         }
@@ -343,31 +331,46 @@ class Upgrade {
         $schemaTableName = $this->db->mapsvg_prefix . "schema";
         $schemaTableExists = $this->db->get_var('SHOW TABLES LIKE \'' . $schemaTableName . '\'');
 
-        if($this->forceV6Reload){
-            $oldSchemaTableExists = $this->db->get_var('SHOW TABLES LIKE \''.$this->db->prefix.'mapsvg_schema\'');
-            if($oldSchemaTableExists){
-                $this->db->query("DROP table ".$schemaTableName);
-                $schemaTableExists = false;
-            }
+        if(!$schemaTableExists){
+            $this->db->query("CREATE TABLE " . $schemaTableName . " (`id` int(11) AUTO_INCREMENT, `title` varchar(255) DEFAULT '', `name` varchar(255) DEFAULT '', `fields` longtext, PRIMARY KEY (id))" . $this->charset);
+            $this->db->query("INSERT INTO " . $schemaTableName. " (`id`, `name`, `fields`) SELECT id, REPLACE(table_name, '" . $this->db->prefix . "mapsvg_',''), fields from " . $this->db->prefix . "mapsvg_schema");
         }
 
-        if(!$schemaTableExists) {
-            $this->db->query("CREATE TABLE " . $schemaTableName . " (`id` int(11) AUTO_INCREMENT, `title` varchar(255) DEFAULT '', `name` varchar(255) DEFAULT '', `fields` longtext, PRIMARY KEY (id))" . $this->charset);
-            $schemas = $this->db->get_results("SELECT * FROM ".$this->db->prefix . "mapsvg_schema");
-            if(!empty($schemas)){
-                foreach($schemas as $schema){
-                    $name = explode("_",$schema->table_name);
-                    if(count($name) > 2){
-                        $id = $name[count($name)-1];
-                        $name2 = $name[count($name)-2];
-
-                        $name = $name2 . "_" . $id;
-                    }
-                    $schema->name = $name;
-                    unset($schema->table_name);
-                    $this->db->insert($schemaTableName, (array)$schema);
-                }
+//        $tableSchema = $this->db->get_results("DESCRIBE " . $this->db->prefix . "mapsvg_schema");
+//        $fields = array();
+//        foreach ($tableSchema as $fieldData) {
+//            $fields[] = $fieldData->Field;
+//        }
+//        if (in_array('name', $fields) === false) {
+//            $this->db->query('ALTER TABLE ' . $this->db->prefix . 'mapsvg_schema ADD `name` VARCHAR(255) AFTER table_name');
+//            $this->db->query("UPDATE " . $this->db->prefix . "mapsvg_schema SET `name`= REPLACE(table_name, '" . $this->db->prefix . "mapsvg_','')");
+//            $this->db->query('ALTER TABLE ' . $this->db->prefix . 'mapsvg_schema DROP COLUMN `table_name`');
+//        }
+//        if (in_array('title', $fields) === false) {
+//            $this->db->query('ALTER TABLE ' . $this->db->prefix . 'mapsvg_schema ADD `title` VARCHAR(255) AFTER `id`');
+//        }
+        $mapsRepo = new MapsRepository();
+        $maps = $mapsRepo->find();
+        foreach($maps as $map){
+            $options = $map->options;
+            if(!$options['database']){
+                $options['database'] = [];
             }
+            $options['database']['regionsTableName'] = 'regions_'.$map->id;
+            $options['database']['objectsTableName'] = 'database_'.$map->id;
+            if($options['tooltips'] && $options['tooltips']['on'] === true){
+                if(!$options['actions']){
+                    $options['actions'] = [
+                        'region' => ['mouseover'=>[]],
+                        'marker' => ['mouseover'=>[]]
+                    ];
+                }
+                $options['actions']['region']['mouseover']['showTooltip'] = true;
+                $options['actions']['marker']['mouseover']['showTooltip'] = true;
+            }
+
+            $map->setOptions($options);
+            $mapsRepo->update($map);
         }
     }
 
@@ -379,75 +382,31 @@ class Upgrade {
             $charset_collate = "default character set utf8\ncollate utf8_unicode_ci";
             $this->db->query("CREATE TABLE " . $mapsTableName . " (`id` int(11) AUTO_INCREMENT, `title` varchar(255) DEFAULT '', `options` longtext DEFAULT '', `svgFilePath` varchar(500), `svgFileLastChanged` int(11) UNSIGNED, `version` varchar(20), `status` tinyint(1) UNSIGNED default 1,`statusChangedAt` timestamp, PRIMARY KEY (id))" . $charset_collate);
             $this->db->query("INSERT INTO " . $mapsTableName . " (`id`, `title`, `options`) SELECT id, post_title, post_content from " . $this->db->prefix . "posts where post_type='mapsvg'");
-        }
+            // TODO postpone this to v6.0.1
+	        //$this->db->query("DELETE FROM " . $this->db->prefix . "posts where post_type='mapsvg'");
 
-        if(!isset($this->mapsRepo)){
-            $this->mapsRepo = new MapsRepository();
-        }
-        $maps = $this->mapsRepo->find();
-
-        foreach($maps as $map){
-            $this->v6FixMap($map);
-        }
-    }
-
-    public function v6FixMap($map){
-
-        if($map->optionsBroken) {
-
-            $post = get_post($map->id);
-            // JSON may be broken. If that's the case, try to fix that
-            $response = wp_remote_post( 'http://mapsvg.com:5050', array(
-                    'method' => 'POST',
-                    'timeout' => 45,
-                    'redirection' => 5,
-                    'httpversion' => '1.0',
-                    'blocking' => true,
-                    'headers' => array(),
-                    'body' => array("options" => $post->post_content),
-                    'cookies' => array()
-                )
-            );
-
-            if ( is_wp_error( $response ) ) {
-                $error_message = $response->get_error_message();
-                return;
-            } else {
-                $data = json_decode($response['body'],true);
-                if(!$data){
-                    return;
-                } else {
-                    $map->setOptions($data);
+            $maps = $this->db->get_results("SELECT `id`, `options` from " . $mapsTableName, ARRAY_A);
+            foreach ($maps as $map) {
+                $data = array();
+                $data['version'] = get_post_meta($map['id'], 'mapsvg_version', true);
+                if (!$data['version']) {
+                    $data['version'] = '1.0.0';
                 }
+                // Maps prior to v3.0.0 stored data as a JS object instead of JSON
+                // So don't transfer those maps options
+                // They will be loaded from wp_posts
+                if (version_compare($data['version'], '3.0.0', '<')) {
+                    $data['options'] = '{}';
+                    $data['svgFileLastChanged'] = 0;
+                } else {
+                    $options = json_decode($map['options'], true);
+                    $data['svgFilePath'] = $options['source'];
+                    $file = new SVGFile(array('path' => $options['source']));
+                    $data['svgFileLastChanged'] = $file->lastChanged();
+                }
+                $this->db->update($mapsTableName, $data, array('id' => $map['id']));
             }
         }
-
-        $map->version = get_post_meta($map->id, 'mapsvg_version', true);
-        if (!$map->version) {
-            $map->version = '1.0.0';
-        }
-
-        if(!isset($map->options['database'])){
-            $map->options['database'] = [];
-        }
-        $map->options['database']['regionsTableName'] = 'regions_'.$map->id;
-        $map->options['database']['objectsTableName'] = 'database_'.$map->id;
-        if(isset($map->options['tooltips']) && $map->options['tooltips']['on'] === true){
-            if(!$map->options['actions']){
-                $map->options['actions'] = [
-                    'region' => ['mouseover'=>[]],
-                    'marker' => ['mouseover'=>[]]
-                ];
-            }
-            $map->options['actions']['region']['mouseover']['showTooltip'] = true;
-            $map->options['actions']['marker']['mouseover']['showTooltip'] = true;
-        }
-
-        $map->setOptions($map->options);
-        if(!isset($this->mapsRepo)) {
-            $this->mapsRepo = new MapsRepository();
-        }
-        $this->mapsRepo->update($map);
     }
 
     public function copyDbAndRegionsTables(){
@@ -458,31 +417,17 @@ class Upgrade {
             $parts = explode("_", $tableName);
             $id = end($parts);
             $newTableName = str_replace("mapsvg_",MAPSVG_PREFIX, $tableName);
-            $tablesNew = $this->db->get_results('SHOW TABLES LIKE \''.$newTableName.'\'');
-            if(!empty($tablesNew) && $this->forceV6Reload && isset($_GET['reload_db'])){
-                $this->db->query("DROP TABLE ".$newTableName);
-                $tablesNew = null;
-            }
-            if(empty($tablesNew)){
-                $this->db->query("CREATE TABLE ".$newTableName." LIKE ".$tableName);
-                $this->db->query("INSERT INTO ".$newTableName." SELECT * FROM ".$tableName);
-                $this->db->query('update '.$newTableName.' set regions = replace(regions,"}",",\"tableName\": \"regions_'.$id.'\"}")');
-            }
+            $this->db->query("CREATE TABLE ".$newTableName." LIKE ".$tableName);
+            $this->db->query("INSERT INTO ".$newTableName." SELECT * FROM ".$tableName);
+            $this->db->query('update '.$newTableName.' set regions = replace(regions,"}",",\"tableName\": \"regions_'.$id.'\"}")');
         }
         $tables = $this->db->get_results('SHOW TABLES LIKE \'%mapsvg_regions_%\'');
         if(!empty($tables)) foreach ($tables as $tableName){
 	        $name = array_values(get_object_vars($tableName));
 	        $tableName = $name[0];
             $newTableName = str_replace("mapsvg_",MAPSVG_PREFIX, $tableName);
-            $tablesNew = $this->db->get_results('SHOW TABLES LIKE \''.$newTableName.'\'');
-            if(!empty($tablesNew) && $this->forceV6Reload && isset($_GET['reload_regions'])){
-                $this->db->query("DROP TABLE ".$newTableName);
-                $tablesNew = null;
-            }
-            if(empty($tablesNew)) {
-                $this->db->query("CREATE TABLE " . $newTableName . " LIKE " . $tableName);
-                $this->db->query("INSERT INTO " . $newTableName . " SELECT * FROM " . $tableName);
-            }
+            $this->db->query("CREATE TABLE ".$newTableName." LIKE ".$tableName);
+            $this->db->query("INSERT INTO ".$newTableName." SELECT * FROM ".$tableName);
         }
     }
 
@@ -508,11 +453,8 @@ class Upgrade {
         $r2o_table_exists = $this->db->get_var('SHOW TABLES LIKE \'' . $this->db->mapsvg_prefix.'r2o\'');
         if (!$r2o_table_exists) {
             $this->db->query("CREATE TABLE " . $this->db->mapsvg_prefix . "r2o (objects_table varchar(100), regions_table varchar(100), region_id varchar(100), object_id int(11), INDEX (objects_table, regions_table, region_id)) " . $this->charset);
-            $r2d_table_exists = $this->db->get_var('SHOW TABLES LIKE \'' . $this->db->prefix.'mapsvg_r2o\'');
-            if ($r2d_table_exists) {
-                $this->db->query("INSERT INTO " . $this->db->mapsvg_prefix . "r2o (`objects_table`, `regions_table`, `region_id`, `object_id`) SELECT CONCAT('objects_',map_id), CONCAT('regions_',map_id), `region_id`, `object_id` from " . $this->db->prefix . "mapsvg_r2d");
-                // $this->db->query("DROP TABLE " . $this->db->prefix . "mapsvg_r2d");
-            }
+            $this->db->query("INSERT INTO " . $this->db->mapsvg_prefix . "r2o (`objects_table`, `regions_table`, `region_id`, `object_id`) SELECT CONCAT('objects_',map_id), CONCAT('regions_',map_id), `region_id`, `object_id` from " . $this->db->prefix . "mapsvg_r2d");
+//            $this->db->query("DROP TABLE " . $this->db->prefix . "mapsvg_r2d");
         }
     }
 
@@ -544,20 +486,5 @@ class Upgrade {
     {
         $settings_table_exists = $this->db->get_var('SHOW TABLES LIKE \'' . $this->db->mapsvg_prefix . 'settings\'');
         return $settings_table_exists;
-    }
-
-    public function reloadR2o()
-    {
-        $schemaRepo = new SchemaRepository();
-        $schemas = $schemaRepo->find();
-        if (!empty($schemas)) {
-            foreach ($schemas as $schema) {
-                if (strpos($schema->name, "database") !== false ||
-                    strpos($schema->name, "objects") !== false) {
-                    $repo = new ObjectsRepository($schema->name);
-                    $repo->setRelationsForAllObjects();
-                }
-            }
-        }
     }
 }

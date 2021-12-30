@@ -1,7 +1,6 @@
 import { LocationAddress } from "./LocationAddress";
 import { MapSVG } from "../Core/globals.js";
 import { Marker } from "../Marker/Marker";
-import { CustomObject } from "../Object/CustomObject";
 
 export class ScreenPoint {
     x: number;
@@ -36,10 +35,6 @@ export class SVGPoint {
         this.x = _x;
         this.y = _y;
     }
-
-    toString() {
-        return this.x + "," + this.y;
-    }
 }
 
 export class GeoPoint {
@@ -66,15 +61,10 @@ export class GeoPoint {
         this.lat = _lat;
         this.lng = _lng;
     }
-
-    toString() {
-        return this.lat + "," + this.lng;
-    }
 }
 
 export interface LocationOptionsInterface {
-    img: string;
-    object?: CustomObject;
+    img?: string;
     svgPoint?: SVGPoint;
     geoPoint?: GeoPoint;
     address?: LocationAddress;
@@ -104,7 +94,6 @@ export interface LocationOptionsInterface {
 export class Location {
     img: string;
     imagePath: string;
-    object?: CustomObject;
     address?: LocationAddress;
     marker?: Marker;
     geoPoint?: GeoPoint;
@@ -115,9 +104,6 @@ export class Location {
     }
 
     update(options: LocationOptionsInterface): void {
-        if (options.object) {
-            this.setObject(options.object);
-        }
         if (options.img) {
             this.setImage(options.img);
         }
@@ -130,13 +116,6 @@ export class Location {
         if (options.geoPoint) {
             this.setGeoPoint(options.geoPoint);
         }
-    }
-
-    /**
-     * Sets parent object
-     */
-    setObject(object: CustomObject): void {
-        this.object = object;
     }
     /**
      * Sets image of the location
@@ -153,7 +132,9 @@ export class Location {
         }
         this.img = src;
         this.imagePath = this.getImageUrl();
-        this.marker && this.marker && this.marker.setImage(this.imagePath);
+        if (this.marker && this.marker.src !== this.imagePath) {
+            this.marker.setImage(this.imagePath);
+        }
     }
 
     /**
@@ -198,7 +179,7 @@ export class Location {
      * Returns full marker image URL
      * @returns {string} image URL
      */
-    getMarkerImage(): string {
+    getMarkerImageUrl(): string {
         if (this.img && this.img.indexOf("uploads/") === 0) {
             return MapSVG.urls.uploads + "markers/" + this.img.replace("uploads/", "");
         } else {
@@ -213,7 +194,6 @@ export class Location {
     getData(): {
         img: string;
         imagePath: string;
-        markerImagePath: string;
         geoPoint?: { lat: number; lng: number };
         svgPoint?: { x: number; y: number };
         address: LocationAddress;
@@ -221,17 +201,12 @@ export class Location {
         const data: {
             img: string;
             imagePath: string;
-            markerImagePath: string;
             geoPoint?: { lat: number; lng: number };
             svgPoint?: { x: number; y: number };
             address: LocationAddress;
         } = {
             img: this.img,
             imagePath: this.imagePath,
-            markerImagePath:
-                this.marker && this.marker.object
-                    ? this.marker.object.getMarkerImage()
-                    : this.imagePath,
             address: this.address,
         };
         if (this.geoPoint) {

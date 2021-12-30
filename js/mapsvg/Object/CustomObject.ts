@@ -2,9 +2,6 @@ import { Schema } from "../Infrastructure/Server/Schema.js";
 import { GeoPoint, Location, LocationOptionsInterface, SVGPoint } from "../Location/Location.js";
 import { LocationAddress } from "../Location/LocationAddress.js";
 import { Region } from "../Region/Region.js";
-import { MapSVG } from "../Core/globals";
-import { LocationFormElement } from "../FormBuilder/FormElements";
-import { SchemaField } from "../Infrastructure/Server/SchemaField";
 
 export class CustomObject {
     id: number;
@@ -16,10 +13,10 @@ export class CustomObject {
     dirtyFields: string[];
     [key: string]: any;
     initialLoad = true;
-    private locationField: SchemaField;
 
     constructor(params: any, schema: Schema) {
-        this.setSchema(schema);
+        this.schema = schema;
+        this.fields = schema.getFieldNames();
         this.dirtyFields = [];
         this.regions = [];
         this._regions = {};
@@ -34,14 +31,7 @@ export class CustomObject {
         }
     }
 
-    private setSchema(schema: Schema): void {
-        this.schema = schema;
-        this.schema.events.on("changed", () => this.setLocationField());
-        this.fields = schema.getFieldNames();
-        this.setLocationField();
-    }
-
-    build(params: any): void {
+    build(params: any) {
         for (const fieldName in params) {
             const field = this.schema.getField(fieldName);
             if (field) {
@@ -68,9 +58,7 @@ export class CustomObject {
                             Object.keys(params[fieldName]).length !== 0
                         ) {
                             const data: LocationOptionsInterface = {
-                                img: this.isMarkersByFieldEnabled()
-                                    ? this.getMarkerImage()
-                                    : params[fieldName].img,
+                                img: params[fieldName].img, // TODO getMarkerImage()
                                 address: new LocationAddress(params[fieldName].address),
                             };
                             if (
@@ -116,77 +104,11 @@ export class CustomObject {
                 }
             }
         }
-        const locationField = this.getLocationField();
-        if (locationField && this.isMarkersByFieldEnabled() && this.isMarkerFieldChanged(params)) {
-            this.reloadMarkerImage();
-        }
     }
 
-    isMarkerFieldChanged(params: { [key: string]: any }): boolean {
-        return Object.keys(params).indexOf(this.getLocationField().markerField) !== -1;
-    }
-
-    setLocationField(): void {
-        // this.locationField = this.schema.getFieldByType("location");
-        // if (this.locationField) {
-        //     this.getLocationField().markerField = this.locationField.markerField;
-        // }
-    }
-
-    getLocationField(): SchemaField {
-        return this.schema.getFieldByType("location");
-    }
-
-    reloadMarkerImage(): void {
-        this.location && this.location.setImage(this.getMarkerImage());
-    }
-
-    getMarkerImage(): string {
-        let fieldValue;
-
-        if (this.isMarkersByFieldEnabled()) {
-            // @ts-ignore
-            const locationField = this.getLocationField();
-            fieldValue = this[locationField.markerField];
-            if (!fieldValue) {
-                return locationField.defaultMarkerPath || MapSVG.defaultMarkerImage;
-            } else {
-                if (locationField.markerField === "regions") {
-                    fieldValue = fieldValue[0] && fieldValue[0].id;
-                } else if (typeof fieldValue === "object" && fieldValue.length) {
-                    fieldValue = fieldValue[0].value;
-                }
-                // @ts-ignore
-                return (
-                    locationField.markersByField[fieldValue] ||
-                    locationField.defaultMarkerPath ||
-                    MapSVG.defaultMarkerImage
-                );
-            }
-        } else {
-            return this.location.imagePath;
-        }
-    }
-
-    isMarkersByFieldEnabled(): boolean {
-        const locationField = this.getLocationField();
-        if (!locationField) {
-            return false;
-        }
-        // @ts-ignore
-        if (
-            locationField.markersByFieldEnabled &&
-            locationField.markerField &&
-            Object.values(locationField.markersByField).length > 0
-        ) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    clone(): CustomObject {
+    clone() {
         const data = this.getData();
+        data.id = null;
         return new CustomObject(data, this.schema);
     }
 
@@ -240,8 +162,6 @@ export class CustomObject {
                 case "post":
                     data[field.name] = this[field.name];
                     data["post"] = this.post;
-                    break;
-                case "status":
                 case "radio":
                     data[field.name] = this[field.name];
                     data[field.name + "_text"] = this[field.name + "_text"];

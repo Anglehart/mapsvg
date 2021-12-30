@@ -170,7 +170,7 @@
         this.templates.main = this.templates[name];
     };
     MapSVGAdminController.prototype.getTemplateData = function () {
-        return this.mapsvg.getOptions(true, null);
+        return this.mapsvg.getOptions(true, null, this.admin.getData().optionsDelta);
     };
     MapSVGAdminController.prototype.setEventHandlersCommon = function () {
         var _this = this;
@@ -311,7 +311,7 @@
         var optmode = _this.admin.getData().optionsMode[_this.admin.getData().mode];
         if (optmode && optmode.hasOwnProperty(key)) {
             // Attribute is read-only, save to dirty
-            $.extend(true, _this.mapsvg.optionsDelta, data);
+            $.extend(true, _this.admin.getData().optionsDelta, data);
         } else {
             // Attribute can be written into MapSVG instance
             _this.mapsvg.update(data);
@@ -333,7 +333,7 @@
             }
             if (_this.admin.getData().optionsMode[_this.admin.getData().mode].hasOwnProperty(key)) {
                 // Attribute is read-only, save to dirty
-                $.extend(true, _this.mapsvg.optionsDelta, data);
+                $.extend(true, _this.admin.getData().optionsDelta, data);
             } else {
                 // Attribute can be written into MapSVG instance
                 _this.mapsvg.update(data);
@@ -351,13 +351,6 @@
             else val = false;
         } else {
             val = jQueryElem.val();
-            if (jQueryElem.data("type") === "int") {
-                val = parseInt(val);
-            } else if (jQueryElem.data("type") === "float") {
-                val = parseFloat(val);
-            } else if (jQueryElem.data("type") === "boolean") {
-                val = MapSVG.parseBoolean(val);
-            }
         }
         var validate = jQueryElem.data("validate");
         if (validate && val != "") {

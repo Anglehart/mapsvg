@@ -56,10 +56,7 @@ export class MapObject {
      */
     getComputedStyle(prop: string, elem?: SVGElement | HTMLElement): string {
         elem = elem || this.element;
-        return MapObject.getComputedStyle(prop, elem);
-    }
 
-    static getComputedStyle(prop: string, elem?: SVGElement | HTMLElement): string {
         const _p1: string = elem.getAttribute(prop);
         if (_p1) {
             return _p1;
@@ -81,7 +78,7 @@ export class MapObject {
         const parent = elem.parentElement;
         const elemType = parent ? parent.tagName : null;
 
-        if (elemType && elemType != "svg") return MapObject.getComputedStyle(prop, parent);
+        if (elemType && elemType != "svg") return this.getComputedStyle(prop, parent);
         else return undefined;
     }
     /**

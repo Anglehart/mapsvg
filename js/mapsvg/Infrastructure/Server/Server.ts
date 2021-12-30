@@ -6,7 +6,7 @@ export class Server {
     completeChunks: number;
 
     constructor() {
-        this.apiUrl = MapSVG.urls.api;
+        this.apiUrl = "/wp-json/mapsvg/v1/";
     }
     getUrl(path) {
         return this.apiUrl + path;
@@ -28,10 +28,10 @@ export class Server {
             data: data,
             beforeSend: function (xhr) {
                 xhr.setRequestHeader("X-WP-Nonce", MapSVG.nonce());
-            },
+            }
         };
 
-        if (data instanceof FormData) {
+        if (data instanceof FormData){
             ajaxParams["processData"] = false;
             ajaxParams["contentType"] = false;
         }
@@ -41,15 +41,14 @@ export class Server {
     put(path: string, data?: any): JQueryPromise<any> {
         const ajaxParams = {
             url: this.apiUrl + path,
-            type: "POST",
+            type: "PUT",
             data: data,
             beforeSend: function (xhr) {
                 xhr.setRequestHeader("X-WP-Nonce", MapSVG.nonce());
-                xhr.setRequestHeader("X-HTTP-Method-Override", "PUT");
-            },
+            }
         };
 
-        if (data instanceof FormData) {
+        if (data instanceof FormData){
             ajaxParams["processData"] = false;
             ajaxParams["contentType"] = false;
         }
@@ -59,11 +58,10 @@ export class Server {
     delete(path: string, data?: any): JQueryPromise<any> {
         return $.ajax({
             url: this.apiUrl + path,
-            type: "POST",
+            type: "DELETE",
             data: data,
             beforeSend: function (xhr) {
                 xhr.setRequestHeader("X-WP-Nonce", MapSVG.nonce());
-                xhr.setRequestHeader("X-HTTP-Method-Override", "DELETE");
             },
         });
     }

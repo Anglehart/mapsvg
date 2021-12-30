@@ -1,9 +1,10 @@
-.mapsvg-directory {
+.mapsvg-wrap {
+    position: relative;
     box-sizing: border-box;
+    max-width: 100% !important;
+    margin: 0 !important;;
 }
-.mapsvg-directory * {
-    box-sizing: border-box;
-}
+/*.mapsvg-wrap .mapsvg-directory {*/
 .mapsvg-directory.flex {
     display: flex;
     flex-flow: column;

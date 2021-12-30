@@ -55,23 +55,16 @@ export class Marker extends MapObject {
     constructor(params) {
         super(null, params.mapsvg);
 
+        this.src = params.location.getMarkerImageUrl();
+
         this.element = $("<div />").addClass("mapsvg-marker")[0];
-        this.image = $('<img src="" />').addClass("mapsvg-marker-image")[0];
-
-        if (params.object) {
-            this.setObject(params.object);
-        }
-
-        if (!(params.location instanceof Location)) {
-            throw new Error("MapSVG.Marker: no Location provided for Marker initializaton");
-        } else {
-            this.location = params.location;
-            this.location.marker = this;
-        }
-
-        this.setImage(this.location.imagePath);
-
+        this.image = $('<img src="' + this.src + '" />').addClass("mapsvg-marker-image")[0];
         $(this.element).append(this.image);
+
+        this.location = params.location;
+        this.location.marker = this;
+        this.mapsvg = params.mapsvg;
+        params.object && this.setObject(params.object);
 
         if (params.width && params.height) {
             this.setSize(params.width, params.height);
@@ -81,16 +74,10 @@ export class Marker extends MapObject {
 
         this.setId(this.mapsvg.markerId());
         this.setSvgPointFromLocation();
+
+        this.setImage(this.src);
+
         this.setAltAttr();
-    }
-
-    reload() {
-        this.setImage();
-        this.setSvgPointFromLocation();
-    }
-
-    private getImagePath() {
-        return (this.object && this.object.getMarkerImage()) || this.location.getMarkerImage();
     }
 
     setSize(width: number, height: number): void {
@@ -173,24 +160,23 @@ export class Marker extends MapObject {
      * Set image of the Marker
      * @param {string} src
      */
-    setImage(src?: string, skipChangingLocationImage = false): void {
-        if (!src) {
-            src = this.getImagePath();
-        }
-        this.src = MapSVG.safeURL(src);
+    setImage(src: string): void {
+        if (!src) return;
+        src = MapSVG.safeURL(src);
         const img = new Image();
         const marker = this;
+        this.src = src;
+        if (marker.image.getAttribute("src") !== "src") {
+            marker.image.setAttribute("src", src);
+        }
         img.onload = function () {
-            if (marker.image.getAttribute("src") !== "src") {
-                marker.image.setAttribute("src", marker.src);
-            }
             marker.setSize((<HTMLImageElement>this).width, (<HTMLImageElement>this).height);
             marker.adjustScreenPosition();
         };
-        img.src = this.src;
-        // if (!skipChangingLocationImage && this.location && this.location.imagePath !== src) {
-        //     this.location.setImage(src);
-        // }
+        img.src = src;
+        if (this.location && this.location.imagePath !== src) {
+            this.location.setImage(src);
+        }
         this.events.trigger("change");
     }
 
@@ -643,18 +629,11 @@ export class Marker extends MapObject {
     }
 
     setLabel(html: string): void {
-        if (html) {
-            if (!this.label) {
-                this.label = $("<div />").addClass("mapsvg-marker-label")[0];
-                $(this.element).append(this.label);
-            }
-            $(this.label).html(html);
-        } else {
-            if (this.label) {
-                $(this.label).remove();
-                delete this.label;
-            }
+        if (!this.label) {
+            this.label = $("<div />").addClass("mapsvg-marker-label")[0];
+            $(this.element).append(this.label);
         }
+        $(this.label).html(html);
     }
 
     /**

@@ -3,6 +3,10 @@ if ( !class_exists('Puc_v4p7_Metadata', false) ):
 
 	/**
 	 * A base container for holding information about updates and plugin metadata.
+	 *
+	 * @author Janis Elsts
+	 * @copyright 2016
+	 * @access public
 	 */
 	abstract class Puc_v4p7_Metadata {
 

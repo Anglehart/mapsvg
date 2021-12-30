@@ -46,23 +46,25 @@
         options.databaseFields = this.mapsvg.objectsRepository
             .getSchema()
             .getFieldsAsArray()
-            .filter((obj) => obj.type === "text" || obj.type === "textarea" || obj.type === "post")
             .map(function (obj) {
-                if (obj.type == "post") {
-                    return "Object.post.url";
-                } else {
-                    return "Object." + obj.name;
+                if (obj.type == "text" || obj.type == "textarea" || obj.type == "post") {
+                    if (obj.type == "post") {
+                        return "Object.post.url";
+                    } else {
+                        return "Object." + obj.name;
+                    }
                 }
             });
         options.regionFields = this.mapsvg.regionsRepository
             .getSchema()
             .getFieldsAsArray()
-            .filter((obj) => obj.type === "text" || obj.type === "textarea" || obj.type === "post")
             .map(function (obj) {
-                if (obj.type == "post") {
-                    return "Region.post.url";
-                } else {
-                    return "Region." + obj.name;
+                if (obj.type == "text" || obj.type == "textarea" || obj.type == "post") {
+                    if (obj.type == "post") {
+                        return "Region.post.url";
+                    } else {
+                        return "Region." + obj.name;
+                    }
                 }
             });
         options.zoomLevels = [];

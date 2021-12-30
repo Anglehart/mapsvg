@@ -1,10 +1,10 @@
 import { GeoPoint, Location, SVGPoint } from "../Location/Location.js";
 import { LocationAddress } from "../Location/LocationAddress.js";
-import { MapSVG } from "../Core/globals";
 export class CustomObject {
     constructor(params, schema) {
         this.initialLoad = true;
-        this.setSchema(schema);
+        this.schema = schema;
+        this.fields = schema.getFieldNames();
         this.dirtyFields = [];
         this.regions = [];
         this._regions = {};
@@ -17,12 +17,6 @@ export class CustomObject {
         if (this.id) {
             this.clearDirtyFields();
         }
-    }
-    setSchema(schema) {
-        this.schema = schema;
-        this.schema.events.on("changed", () => this.setLocationField());
-        this.fields = schema.getFieldNames();
-        this.setLocationField();
     }
     build(params) {
         for (const fieldName in params) {
@@ -40,9 +34,7 @@ export class CustomObject {
                             params[fieldName] != "" &&
                             Object.keys(params[fieldName]).length !== 0) {
                             const data = {
-                                img: this.isMarkersByFieldEnabled()
-                                    ? this.getMarkerImage()
-                                    : params[fieldName].img,
+                                img: params[fieldName].img,
                                 address: new LocationAddress(params[fieldName].address),
                             };
                             if (params[fieldName].geoPoint &&
@@ -87,62 +79,10 @@ export class CustomObject {
                 }
             }
         }
-        const locationField = this.getLocationField();
-        if (locationField && this.isMarkersByFieldEnabled() && this.isMarkerFieldChanged(params)) {
-            this.reloadMarkerImage();
-        }
-    }
-    isMarkerFieldChanged(params) {
-        return Object.keys(params).indexOf(this.getLocationField().markerField) !== -1;
-    }
-    setLocationField() {
-    }
-    getLocationField() {
-        return this.schema.getFieldByType("location");
-    }
-    reloadMarkerImage() {
-        this.location && this.location.setImage(this.getMarkerImage());
-    }
-    getMarkerImage() {
-        let fieldValue;
-        if (this.isMarkersByFieldEnabled()) {
-            const locationField = this.getLocationField();
-            fieldValue = this[locationField.markerField];
-            if (!fieldValue) {
-                return locationField.defaultMarkerPath || MapSVG.defaultMarkerImage;
-            }
-            else {
-                if (locationField.markerField === "regions") {
-                    fieldValue = fieldValue[0] && fieldValue[0].id;
-                }
-                else if (typeof fieldValue === "object" && fieldValue.length) {
-                    fieldValue = fieldValue[0].value;
-                }
-                return (locationField.markersByField[fieldValue] ||
-                    locationField.defaultMarkerPath ||
-                    MapSVG.defaultMarkerImage);
-            }
-        }
-        else {
-            return this.location.imagePath;
-        }
-    }
-    isMarkersByFieldEnabled() {
-        const locationField = this.getLocationField();
-        if (!locationField) {
-            return false;
-        }
-        if (locationField.markersByFieldEnabled &&
-            locationField.markerField &&
-            Object.values(locationField.markersByField).length > 0) {
-            return true;
-        }
-        else {
-            return false;
-        }
     }
     clone() {
         const data = this.getData();
+        data.id = null;
         return new CustomObject(data, this.schema);
     }
     getEnumLabel(field, params, fieldName) {
@@ -191,8 +131,6 @@ export class CustomObject {
                 case "post":
                     data[field.name] = this[field.name];
                     data["post"] = this.post;
-                    break;
-                case "status":
                 case "radio":
                     data[field.name] = this[field.name];
                     data[field.name + "_text"] = this[field.name + "_text"];

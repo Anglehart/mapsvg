@@ -48,10 +48,12 @@ export class Controller {
         const _this = this;
         $(this.containers.contentWrap).nanoScroller({
             preventPageScrolling: true,
+            iOSNativeScrolling: true,
         });
         setTimeout(function () {
             $(_this.containers.contentWrap).nanoScroller({
                 preventPageScrolling: true,
+                iOSNativeScrolling: true,
             });
         }, 300);
     }
@@ -114,7 +116,7 @@ export class Controller {
     viewReadyToFill() {
         const _this = this;
         if (_this.autoresize) {
-            _this.resizeSensor = new ResizeSensor(this.containers.sizer, () => {
+            _this.resizeSensor = new ResizeSensor(this.containers.sizer, function () {
                 _this.adjustHeight();
                 _this.updateScroll();
                 _this.events.trigger("resize", this, [this]);

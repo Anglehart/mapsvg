@@ -6,7 +6,6 @@ import Bloodhound from "Bloodhound";
 import { SchemaField } from "../../../Infrastructure/Server/SchemaField";
 import { Server } from "../../../Infrastructure/Server/Server";
 import { Location } from "../../../Location/Location";
-import GeocoderRequest = google.maps.GeocoderRequest;
 
 const $ = jQuery;
 
@@ -41,7 +40,6 @@ export class DistanceFormElement extends FormElement {
     zipLength: number;
     isGeo: boolean;
     defaultLength: number;
-    spinner: HTMLElement;
 
     constructor(options: SchemaField, formBuilder: FormBuilder, external: { [key: string]: any }) {
         super(options, formBuilder, external);
@@ -192,7 +190,7 @@ export class DistanceFormElement extends FormElement {
         this.country = options.country;
         this.language = options.language;
         this.searchByZip = options.searchByZip;
-        this.zipLength = parseInt(options.zipLength) || 5;
+        this.zipLength = options.zipLength || 5;
         this.userLocationButton = MapSVG.parseBoolean(options.userLocationButton);
         this.options = options.options || [
             { value: "10", default: true },
@@ -201,24 +199,24 @@ export class DistanceFormElement extends FormElement {
             { value: "100", default: false },
         ];
 
-        let defOption: { value: number };
+        let selected = false;
         if (this.value) {
             this.options.forEach((option) => {
                 if (option.value === this.value.length) {
-                    defOption = option;
+                    option.selected = true;
+                    selected = true;
                 }
             });
         }
-        if (!defOption) {
-            defOption = this.options.find(function (option) {
-                return option.default === true;
+        if (!selected) {
+            this.options.forEach(function (option) {
+                if (option.default) {
+                    option.selected = true;
+                }
             });
         }
-        if (!defOption) {
-            defOption = this.options[0];
-        }
         const defLengthOption = this.options.find((opt) => opt.selected === true);
-        this.defaultLength = defOption.value;
+        this.defaultLength = defLengthOption.value;
         this.setDefaultValue();
     }
 
@@ -245,7 +243,7 @@ export class DistanceFormElement extends FormElement {
             $(this.domElements.main).find('[name="distanceLength"]')[0]
         );
         this.inputs.address = <HTMLInputElement>(
-            $(this.domElements.main).find('[name="distance"]')[0]
+            $(this.domElements.main).find('[name="distanceAddress"]')[0]
         );
     }
 
@@ -262,7 +260,7 @@ export class DistanceFormElement extends FormElement {
         schema.language = this.language;
         schema.country = this.country;
         schema.searchByZip = this.searchByZip;
-        schema.zipLength = parseInt(this.zipLength + "");
+        schema.zipLength = this.zipLength;
         schema.userLocationButton = MapSVG.parseBoolean(this.userLocationButton);
         if (schema.distanceControl === "none") {
             schema.distanceDefault = schema.options.filter(function (o) {
@@ -354,7 +352,6 @@ export class DistanceFormElement extends FormElement {
         });
 
         const thContainer = $(this.domElements.main).find(".typeahead");
-        this.spinner = $("<span class='spinner-border spinner-border-sm'></span>")[0];
 
         if (this.searchByZip) {
             // var tH = thContainer.typeahead({minLength: this.zipLength, autoselect: true}, {
@@ -367,42 +364,33 @@ export class DistanceFormElement extends FormElement {
             //     console.log(ev,query,dataset);
             // });
             thContainer.on("change keyup", (e) => {
-                const zip = $(e.target).val().toString();
-                if (zip.length === _this.zipLength) {
-                    $(this.spinner).appendTo($(e.target).closest(".distance-search-wrap"));
-
-                    locations.search(
-                        $(e.target).val(),
-                        (data) => this.handleAddressFieldChange(zip, data),
-                        (data) => this.handleAddressFieldChange(zip, data, true)
-                    );
+                if ($(e.target).val().toString().length === _this.zipLength) {
+                    locations.search($(e.target).val(), null, (data) => {
+                        if (data && data[0]) {
+                            this.setValue({ geoPoint: data[0].geometry.location });
+                            this.triggerChanged();
+                        }
+                    });
                 }
             });
         } else {
             // @ts-ignore
+            const spinner = $("<span class='spinner-border spinner-border-sm'></span>");
             const tH = thContainer
                 .typeahead(
                     { minLength: 3 },
                     {
                         name: "mapsvg-addresses",
                         display: "formatted_address",
+                        source: locations,
                         limit: 5,
-                        async: true,
-                        // @ts-ignore
-                        source: (query, sync, async) => {
-                            const request = { address: query } as GeocoderRequest;
-                            if (this.country) {
-                                request.componentRestrictions = { country: this.country };
-                            }
-                            MapSVG.geocode(request, async);
-                        },
                     }
                 )
-                .on("typeahead:asyncrequest", (e) => {
-                    $(this.spinner).appendTo($(e.target).closest(".twitter-typeahead"));
+                .on("typeahead:asyncrequest", function (e) {
+                    spinner.appendTo($(e.target).closest(".twitter-typeahead"));
                 })
-                .on("typeahead:asynccancel typeahead:asyncreceive", (e) => {
-                    $(this.spinner).remove();
+                .on("typeahead:asynccancel typeahead:asyncreceive", function (e) {
+                    spinner.remove();
                 });
             $(this.domElements.main).find(".mapsvg-distance-fields").removeClass("search-by-zip");
         }
@@ -413,8 +401,16 @@ export class DistanceFormElement extends FormElement {
                 _this.formBuilder.mapsvg.showUserLocation((location: Location) => {
                     locations.search(
                         location.geoPoint.lat + "," + location.geoPoint.lng,
-                        (data) => this.setAddressByUserLocation(data, location),
-                        (data) => this.setAddressByUserLocation(data, location)
+                        null,
+                        function (data) {
+                            if (data && data[0]) {
+                                _this.setAddress(data[0].formatted_address);
+                            } else {
+                                _this.setAddress(
+                                    location.geoPoint.lat + "," + location.geoPoint.lng
+                                );
+                            }
+                        }
                     );
                     this.setValue({ geoPoint: location.geoPoint });
                     this.triggerChanged();
@@ -430,10 +426,7 @@ export class DistanceFormElement extends FormElement {
             }
         });
         thContainer.on("typeahead:select", (ev, item) => {
-            this.setValue({
-                address: item.formatted_address,
-                geoPoint: item.geometry.location.toJSON(),
-            });
+            this.setValue({ address: item.formatted_address, geoPoint: item.geometry.location });
             this.triggerChanged();
             thContainer.blur();
         });
@@ -447,22 +440,6 @@ export class DistanceFormElement extends FormElement {
             this.setLength(parseInt(e.target.value), false);
             this.triggerChanged();
         });
-    }
-    setAddressByUserLocation(data, location): void {
-        if (data && data[0]) {
-            this.setAddress(data[0].formatted_address);
-        } else {
-            this.setAddress(location.geoPoint.lat + "," + location.geoPoint.lng);
-        }
-    }
-    handleAddressFieldChange(zip: string, data, removeSpinner = false): void {
-        if (removeSpinner) {
-            $(this.spinner).remove();
-        }
-        if (data && data[0]) {
-            this.setValue({ address: zip, geoPoint: data[0].geometry.location }, false);
-            this.triggerChanged();
-        }
     }
 
     addSelect2(): void {

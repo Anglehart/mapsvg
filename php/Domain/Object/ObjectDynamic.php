@@ -16,11 +16,11 @@ class ObjectDynamic extends Model implements \JsonSerializable {
     /* @private $data Stores custom fields and values */
     private $data = array();
 
-    public function __construct($data) {
+    public function __construct(array $data) {
     	parent::__construct($data);
     }
 
-	public function update($params)
+	public function update(array $params)
 	{
 		foreach($params as $paramName => $options){
 			$methodName = 'set'.ucfirst($paramName);

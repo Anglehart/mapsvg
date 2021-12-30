@@ -1,6 +1,6 @@
 const defRegionTemplate = "<div>\n" +
     "  <p>This is the demo content of the <strong>Region %templateType%</strong>.</p>\n" +
-    '  <p>How to edit it: if you are in mapsvg control panel now, click on the following link to open the template editor for this view: <a href="#" class="mapsvg-template-link" data-template="%templateTypeSnake%Region">Menu > Templates > Region %templateType%</a>.</p>\n' +
+    '  <p>Click on the following link to edit the content of this window: <a href="#" class="mapsvg-template-link" data-template="%templateTypeSnake%Region">Menu > Templates > Region %templateType%</a>.</p>\n' +
     '  <p>More information about templates: <a href="https://mapsvg.com/docs/map-editor/templates" target="_blank">mapsvg.com/docs/map-editor/templates</a></p>\n' +
     "</div>\n" +
     "<hr />\n\n" +
@@ -23,7 +23,7 @@ const defRegionTemplate = "<div>\n" +
     "{{/each}}";
 const defDBTemplate = "<div>\n" +
     "  <p>This is the demo content of the <strong>DB Object %templateType%</strong>.</p>\n" +
-    '  <p>How to edit it: if you are in mapsvg control panel now, click on the following link to open the template editor for this view: <a href="#" class="mapsvg-template-link" data-template="%templateTypeSnake%">Menu > Templates > DB Object %templateType%</a>.</p>\n' +
+    '  <p>Click on the following link to edit the content of this window: <a href="#" class="mapsvg-template-link" data-template="%templateTypeSnake%Region">Menu > Templates > Region %templateType%</a>.</p>\n' +
     '  <p>More information about templates: <a href="https://mapsvg.com/docs/map-editor/templates" target="_blank">mapsvg.com/docs/map-editor/templates</a></p>\n' +
     "</div>\n" +
     "<hr />\n\n" +
@@ -336,7 +336,7 @@ const DefaultOptions = {
             perpage: 30,
             next: "Next",
             prev: "Prev.",
-            showIn: "both",
+            showIn: "directory",
         },
         loadOnStart: true,
         table: "",
@@ -414,7 +414,6 @@ const DefaultOptions = {
         minZoom: 1,
         style: "default",
         styleJSON: [],
-        language: "en",
     },
     groups: [],
     floors: [],

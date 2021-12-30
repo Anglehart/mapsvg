@@ -113,7 +113,6 @@
 
         this.view.on("click", ".region-cpicker", function (e) {
             e.preventDefault();
-            e.stopPropagation();
 
             setTimeout(function () {
                 _this.view.addClass("mapsvg-cpicker-opened");
@@ -394,9 +393,10 @@
 
         _this.mapsvg.regionsRepository.findById(data.id).done((regionFromRepo) => {
             regionFromRepo.update(data);
-            this.mapsvg.regionsRepository.update(regionFromRepo).fail(function (response) {
-                MapSVG.handleFailedRequest(response);
+            this.mapsvg.regionsRepository.update(regionFromRepo).fail(function () {
+                $.growl.error({ title: "Server error", message: "Can't update region" });
             });
+            // obj.title = region.title || '';
             this.updateDataRow(regionFromRepo);
         });
         this.closeFormHandler();

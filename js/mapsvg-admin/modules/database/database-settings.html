@@ -3,7 +3,7 @@
         <div class="form-group row mb-3">
             <label class="col-md-3 col-form-label">Load objects on start</label>
             <div class="col-md-9">
-                <div class=" form-switch form-switch-md">
+                <div class=" form-check form-switch form-switch-md">
                 <input type="checkbox" name="database[loadOnStart]" class=" form-check-input"
                        {{#if  database.loadOnStart}}checked{{/if}}  data-live="change">
                 </div>
@@ -17,7 +17,7 @@
         <div class="form-group row mb-3">
             <label class="col-md-3  col-form-label">Never load objects if no filters are chosen</label>
             <div class="col-md-9 ">
-                <div class=" form-switch form-switch-md">
+                <div class=" form-check form-switch form-switch-md">
                 <input type="checkbox" name="database[noFiltersNoLoad]" class=" form-check-input"
                        {{#if  database.noFiltersNoLoad}}checked{{/if}}  data-live="change">
             </div>

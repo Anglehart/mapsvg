@@ -103,12 +103,6 @@ class ObjectsController extends Controller {
 		$convertLatLngToAddress = filter_var($request['convertLatlngToAddress'], FILTER_VALIDATE_BOOLEAN);
 		$objectsRepository->import($data, $convertLatLngToAddress);
 
-        if(isset($objectsRepository->geocodingErrors) && count($objectsRepository->geocodingErrors) > 0){
-            $response = [];
-            $response["error"] = ["geocodingError" => $objectsRepository->geocodingErrors];
-            return self::render($response, 400);
-        } else {
-            return self::render([], 200);
-        }
- 	}
+		return self::render([], 200);
+	}
 }

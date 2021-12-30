@@ -13,13 +13,13 @@ class SVGFileController extends Controller {
 	 */
 	public static function download($request){
 
-		$response = file_get_contents(MAPSVG_UPLOADS_DIR . DIRECTORY_SEPARATOR . "mapsvg.svg");
+		$url = MAPSVG_MAPS_UPLOADS_URL.'mapsvg.svg?nocache='.rand();
+		$response = Remote::get($url);
 
 		if($response && !isset($response['error_message'])){
 			header('Content-type: image/svg+xml');
 			header("Content-Disposition: attachment; filename=mapsvg.svg");
-			echo $response;
-			die();
+			echo $response['body'];
 		}else {
 			echo json_encode( $response );
 			die();
@@ -36,12 +36,7 @@ class SVGFileController extends Controller {
 		$filesRepo = new SVGFileRepository();
 		$file = new SVGFile($files['file']);
 		$file = $filesRepo->create($file);
-		return self::render(array('file' => array(
-		    'name' => $file->name,
-            'relativeUrl' => $file->relativeUrl,
-            'pathShort' => $file->pathShort,
-            'serverPath' => $file->serverPath
-        )));
+		return self::render(array('file' => array('name' => $file->name, 'path'=>$file->path)));
 	}
 
 	/**
@@ -70,7 +65,7 @@ class SVGFileController extends Controller {
 	 */
 	public static function copy($request){
 		$filesRepo = new SVGFileRepository();
-		$file = new SVGFile(["relativeUrl" => $request['file']['path']]);
+		$file = new SVGFile($request['file']);
 		$newFile = $filesRepo->copy($file);
 		return self::render(array('file' => $newFile));
 	}
@@ -82,7 +77,7 @@ class SVGFileController extends Controller {
 	 */
 	private static function updateLastChanged($file, $updateTitles = null){
 		$mapsRepo = new MapsRepository();
-		$query = new Query(array('filters'=> array('svgFilePath'=>$file->relativeUrl)));
+		$query = new Query(array('filters'=> array('svgFilePath'=>$file->path)));
 		$maps = $mapsRepo->find($query);
 		foreach($maps as $map){
 			/** @var $map Map */

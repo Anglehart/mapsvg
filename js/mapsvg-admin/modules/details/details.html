@@ -30,14 +30,14 @@
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="detailsView[location]" value="leftSidebar"
                            {{#ifeq
-                                   detailsView.location 'leftSidebar'}}checked{{/ifeq}} data-live="change">
+                                   detailsView.location 'leftsidebar'}}checked{{/ifeq}} data-live="change">
                     <label class="form-check-label">
                         Left
                         sidebar</label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="detailsView[location]" value="rightSidebar"
-                           {{#ifeq detailsView.location 'rightSidebar'}}checked{{/ifeq}}
+                           {{#ifeq detailsView.location 'rightsidebar'}}checked{{/ifeq}}
                            data-live="change">
                     <label class="form-check-label">
                         Right sidebar</label>
@@ -90,7 +90,7 @@
         <div class="form-group row mb-3">
             <label class="col-md-3 col-form-label">Auto height</label>
             <div class="col-md-9">
-                <div class=" form-switch form-switch-md">
+                <div class=" form-check form-switch form-switch-md">
                     <input type="checkbox" name="detailsView[autoresize]" class="form-check-input"
                            {{#if detailsView.autoresize}}checked{{/if}} data-live="change">
                 </div>
@@ -112,7 +112,7 @@
         <div class="form-group row mb-3">
             <label class="col-md-3 col-form-label">Fullscreen on mobile devices</label>
             <div class="col-md-9">
-                <div class=" form-switch form-switch-md">
+                <div class=" form-check form-switch form-switch-md">
                     <input type="checkbox" name="detailsView[mobileFullscreen]" class="form-check-input"
                            {{#if detailsView.mobileFullscreen}}checked{{/if}} data-live="change">
                 </div>

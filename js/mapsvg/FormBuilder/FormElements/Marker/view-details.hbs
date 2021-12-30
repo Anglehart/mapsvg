@@ -1,13 +1,12 @@
 <script type="text/x-handlebars-template" id="mapsvg-data-tmpl-marker">
       <div class="mapsvg-marker-names">
         <div>{{address.formatted}}</div>
-
         {{#if geoPoint.lat}}
             <div class="mapsvg-marker-geocoords">{{#if geoPoint.lat}}{{geoPoint.lat}}, {{geoPoint.lng}}{{/if}}</div>
         {{else}}
             <div class="mapsvg-marker-coords">x: {{round svgPoint.x}}, y: {{round svgPoint.y}}</div>
         {{/if}}
-        {{#if address.formatted}}
+    {{#if address.formatted}}
             <a href="#" onclick="jQuery('#mapsvg-location-fields-toggle').toggle();jQuery(this).html(jQuery('#mapsvg-location-fields-toggle').is(':visible')?'Hide location fields':'Show location fields');return false;">Show location fields</a>
         {{/if}}
         <div id="mapsvg-location-fields-toggle" style="display: none; font-size: 13px; margin-top: 5px;">
@@ -17,13 +16,13 @@
                     {{.}}
                 </div>
             {{/each}}
-            {{#if address.county}}
+    {{#if address.county}}
                 <div style="margin-bottom: 5px;">
                     <span class="text-muted">location.address.county</span><br />
                     {{address.county}}
                 </div>
             {{/if}}
-            {{#if address.state}}
+    {{#if address.state}}
                 <div style="margin-bottom: 5px;">
                     <span class="text-muted">location.address.state</span><br />
                     {{address.state}}
@@ -33,7 +32,7 @@
                     {{address.state_short}}
                 </div>
             {{/if}}
-            {{#if address.zip}}
+    {{#if address.zip}}
                 <div style="margin-bottom: 5px;">
                     <span class="text-muted">location.address.zip</span><br />
                     {{address.zip}}
@@ -47,11 +46,20 @@
             <span class="text-muted">location.lng</span><br />
                 {{lng}}
             </div>
+
+
         </div>
     </div>
 
+
     <div class="mapsvg-region-controls mapsvg-marker-controls">
-        <button class="btn btn-outline-secondary  btn mapsvg-marker-delete toggle-tooltip" title="Delete"><i class="mfa mfa-trash"></i> </button>
-        <button class="btn btn-outline-secondary  btn mapsvg-marker-image-btn-trigger mapsvg-marker-image-btn toggle-tooltip" data-marker-id="{{marker.id}}" title="Image"><img src="{{imagePath}}" /> </button>
+
+        <button class="btn btn-outline-secondary  btn mapsvg-marker-delete toggle-tooltip" title="Delete"><i class="fa fa-trash"></i> </button>
+        <!--<div class="hidden-input-wrap">-->
+            <!--<button class="btn btn-outline-secondary  btn-sm mapsvg-link-btn {{#if link}}active{{/if}} toggle-tooltip" title="Link" ><i class="fa fa-link"></i> </button>-->
+        <!--</div>-->
+        {{#unless markersByFieldEnabled}}
+            <button class="btn btn-outline-secondary  btn mapsvg-marker-image-btn-trigger mapsvg-marker-image-btn toggle-tooltip" data-marker-id="{{marker.id}}" title="Image"><img src="{{imagePath}}" /> </button>
+        {{/unless}}
     </div>
 </script>

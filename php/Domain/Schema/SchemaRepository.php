@@ -34,7 +34,7 @@ class SchemaRepository extends Repository {
 	/**
 	 * Creates a new schema and table
 	 *
-	 * @param $schema array|Schema schema of a table
+	 * @param $schema array schema of a table
 	 * @return Schema
 	 */
 	function create($data)
@@ -77,7 +77,7 @@ class SchemaRepository extends Repository {
 	/**
 	 * Create or alter custom table structure
 	 */
-	private function tableSet($schema) {
+	private function tableSet(Schema $schema) {
 
 		$fields                 = array();
 
@@ -271,16 +271,12 @@ class SchemaRepository extends Repository {
 		$schema->clearPrevFields();
 	}
 
-	public function decodeParams($data){
+	public function decodeParams(array $data){
 		$data['fields'] = json_decode($data['fields']);
 		return $data;
 	}
 
 	public function encodeParams($data, $options = false){
-
-        if(is_object($data) && method_exists($data, 'getData')){
-            $data = $data->getData();
-        }
 
 		$data = (array)$data;
 		foreach($data as $key=>$val){
@@ -288,9 +284,7 @@ class SchemaRepository extends Repository {
 		        unset($data[$key]);
             }
         }
-		if(!is_string($data['fields'])){
-            $data['fields'] = json_encode($data['fields'], JSON_UNESCAPED_UNICODE);
-        }
+		$data['fields'] = json_encode($data['fields'], JSON_UNESCAPED_UNICODE);
 		return $data;
 	}
 

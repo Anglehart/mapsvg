@@ -96,9 +96,8 @@ export class Region extends MapObject {
         let w;
         w = this.getComputedStyle("stroke-width");
         w = w ? w.replace("px", "") : "1";
-        w = parseFloat(w);
+        w = w == "1" ? 1.2 : parseFloat(w);
         this.style["stroke-width"] = w;
-        $(this.element).attr("data-stroke-width", w);
     }
     /**
      * Save state of a Region (all parameters)
@@ -118,9 +117,6 @@ export class Region extends MapObject {
 
         // @ts-ignore (TS doesn't recognize getTransformToElement() method from SVGGraphicsElement)
         const matrix = this.element.getTransformToElement(this.mapsvg.containers.svg);
-        if (!matrix) {
-            return _bbox;
-        }
 
         const x2 = bbox.x + bbox.width;
         const y2 = bbox.y + bbox.height;
@@ -192,6 +188,7 @@ export class Region extends MapObject {
         };
         if (forTemplate) {
             o.disabled = this.disabled;
+            o.dataCounter = (this.data && this.data.length) || 0;
         }
         for (const key in o) {
             if (typeof o[key] === "undefined") {
@@ -217,10 +214,8 @@ export class Region extends MapObject {
             objects: this.objects,
             data: this.data,
         };
-        if (this.data) {
-            for (const key in this.data) {
-                if (key != "title" && key != "id") data[key] = this.data[key];
-            }
+        for (const key in this.data) {
+            if (key != "title" && key != "id") data[key] = this.data[key];
         }
 
         return data;
@@ -502,17 +497,13 @@ export class Region extends MapObject {
             this.mapsvg.options.regionStatuses && this.mapsvg.options.regionStatuses[status];
         if (statusOptions) {
             this.status = status;
-            if (this.data) {
-                this.data.status = status;
-                this.data.status_text = statusOptions.label;
-            }
+            this.data.status = status;
+            this.data.status_text = statusOptions.label;
             this.setDisabled(statusOptions.disabled, true);
         } else {
             this.status = undefined;
-            if (this.data) {
-                this.data.status = undefined;
-                this.data.status_text = undefined;
-            }
+            this.data.status = undefined;
+            this.data.status_text = undefined;
             this.setDisabled(false, true);
         }
         this.setFill();
@@ -594,9 +585,7 @@ export class Region extends MapObject {
      */
     setData(data: CustomObject) {
         this.data = data;
-        if (typeof data.title !== "undefined") {
-            this.setTitle(data.title);
-        }
+        this.setTitle(data.title);
     }
 
     /**

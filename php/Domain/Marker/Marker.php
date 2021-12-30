@@ -107,37 +107,4 @@ class Marker extends File {
 //		return $url;
 //	}
 
-    public function convertServerPathToUrl($path){
-        if(strpos($path, MAPSVG_PINS_DIR) !== false){
-            $expl = $this->getLastTwoFolders(MAPSVG_PINS_DIR, DIRECTORY_SEPARATOR);
-            list($junk,$important_stuff) = explode($expl, $path);
-            $rel = parse_url(MAPSVG_PINS_URL);
-            $important_stuff = ltrim(str_replace("\\","/",$important_stuff), "/");
-            return $rel["path"].$important_stuff;
-        } else {
-            $upl = MAPSVG_UPLOADS_DIR . DIRECTORY_SEPARATOR . "markers";
-            $expl = $this->getLastTwoFolders($upl, DIRECTORY_SEPARATOR);
-            list($junk,$important_stuff) = explode($expl, $path);
-            $important_stuff = ltrim(str_replace("\\","/",$important_stuff), "/");
-            $rel = parse_url(MAPSVG_UPLOADS_URL . "markers/" );
-            return $rel["path"].$important_stuff;
-        }
-    }
-
-    public function convertUrlToServerPath($url){
-        $rel = parse_url(MAPSVG_PINS_URL);
-        if(strpos($url, $rel["path"]) !== false){
-            $expl = $this->getLastTwoFolders(MAPSVG_PINS_DIR, DIRECTORY_SEPARATOR);
-            list($junk,$important_stuff) = explode($expl, $url);
-            $important_stuff = str_replace("/",DIRECTORY_SEPARATOR,$important_stuff);
-            return MAPSVG_MAPS_DIR.$important_stuff;
-        } else {
-            $upl = MAPSVG_UPLOADS_DIR . DIRECTORY_SEPARATOR . "markers";
-            $expl = $this->getLastTwoFolders($upl, DIRECTORY_SEPARATOR);
-            list($junk,$important_stuff) = explode($expl, $url);
-            $important_stuff = str_replace("/",DIRECTORY_SEPARATOR,$important_stuff);
-            return $upl.$important_stuff;
-        }
-    }
-
 }

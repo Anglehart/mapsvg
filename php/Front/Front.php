@@ -45,7 +45,7 @@ class Front
 		wp_register_script('bloodhound', MAPSVG_PLUGIN_URL . 'js/vendor/typeahead/bloodhound.js', null, '0.11.1');
 		wp_enqueue_script('bloodhound');
 
-		wp_register_script('handlebars', MAPSVG_PLUGIN_URL . 'js/vendor/handlebars/handlebars.min.js', null, '4.7.7');
+		wp_register_script('handlebars', MAPSVG_PLUGIN_URL . 'js/vendor/handlebars/handlebars-standalone.js', null, '4.0.2');
 		wp_enqueue_script('handlebars');
 		wp_enqueue_script('handlebars-helpers', MAPSVG_PLUGIN_URL . 'js/vendor/handlebars/handlebars-helpers.js', null, MAPSVG_ASSET_VERSION);
 
@@ -53,12 +53,10 @@ class Front
 		//wp_enqueue_script('mapsvg');
 
 		wp_localize_script('mapsvg','mapsvg_paths', array(
-			'root'      => MAPSVG_PLUGIN_RELATIVE_URL,
-            'api' => get_rest_url(null, 'mapsvg/v1/'),
-			'templates' => MAPSVG_PLUGIN_RELATIVE_URL.'js/mapsvg-admin/templates/',
+			'root'      => MAPSVG_PLUGIN_PATH,
+			'templates' => MAPSVG_PLUGIN_PATH.'js/mapsvg-admin/templates/',
 			'maps'      => parse_url(MAPSVG_MAPS_URL, PHP_URL_PATH),
-			'uploads'   => parse_url(MAPSVG_UPLOADS_URL, PHP_URL_PATH),
-            'home' => parse_url(home_url(), PHP_URL_PATH) ? parse_url(home_url(), PHP_URL_PATH) : '',
+			'uploads'   => parse_url(MAPSVG_MAPS_UPLOADS_URL, PHP_URL_PATH)
 		));
 		wp_localize_script('mapsvg','mapsvg_ini_vars', array(
 			'post_max_size'       => ini_get('post_max_size'),
@@ -135,12 +133,8 @@ class Front
 
 		$googleMapsApiKey = Options::get("google_api_key");
 
-        $map->withSchema();
-        $map->withRegions();
-
-		if(isset($map->options["database"]["loadOnStart"]) && $map->options["database"]["loadOnStart"] === true){
-            $map->withObjects();
-        }
+		$map->withSchema();
+		$map->withData();
 
 		// Check if map settings need to be upgraded
 		$updater = new MapUpdater();
@@ -158,7 +152,7 @@ class Front
 		$container_id = $no_double_render ? $map->id : $this->generateContainerId($map->id);
 		$data    = '<div id="mapsvg-'.$container_id.'" class="mapsvg"></div>';
 		$script  = "<script type=\"text/javascript\">";
-		$script .= "window.addEventListener(\"load\", function(){";
+		$script .= "jQuery(document).ready(function(){";
 		$script .= "MapSVG.version = '".MAPSVG_VERSION."';\n";
 		$script .= 'var mapsvg_options = '.$js_mapsvg_options.';';
 

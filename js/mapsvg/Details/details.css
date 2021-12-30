@@ -3,10 +3,6 @@
     touch-action: manipulation;
     -webkit-backface-visibility:  hidden;
     -webkit-tap-highlight-color:  transparent;
-    box-sizing: border-box;
-}
-.mapsvg-details-container * {
-    box-sizing: border-box;
 }
 .mapsvg-details-container.mapsvg-filters-wrap .mapsvg-controller-view-content {
     padding: 10px 10px 80px 10px;
@@ -34,16 +30,6 @@
     z-index: 3;
 }
 .mapsvg-details-container.mapsvg-details-container-relative {
-    position: relative;
-}
-.mapsvg-details-container .mapsvg-controller-view {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-}
-.mapsvg-details-container-relative .mapsvg-controller-view {
     position: relative;
 }
 
@@ -153,6 +139,6 @@
         overflow: visible !important;
     }
     .mapsvg-mobile-modal-close {
-        display: block !important;
+        display: block;
     }
 }

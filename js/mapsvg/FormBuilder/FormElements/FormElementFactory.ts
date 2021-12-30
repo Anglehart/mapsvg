@@ -68,11 +68,9 @@ export class FormElementFactory {
 
     getExtraParams() {
         const databaseFields = [];
-        const databaseFieldsFilterable = [];
-        const databaseFieldsFilterableShort = [];
+        let databaseFieldsFilterableShort = [];
         const regionFields = [];
-        const regionFieldsFilterable = [];
-        const regions = new ArrayIndexed("id");
+        const regions = [];
         let mapIsGeo = false;
 
         if (this.mapsvg) {
@@ -95,17 +93,21 @@ export class FormElementFactory {
                             databaseFields.push("Object." + obj.name);
                         }
                     }
-                    if (obj.type == "region" || obj.type == "select" || obj.type == "radio") {
-                        databaseFieldsFilterable.push("Object." + obj.name);
-                        databaseFieldsFilterableShort.push(obj.name);
-                    }
                 });
+                databaseFieldsFilterableShort = schemaObjects
+                    .getFieldsAsArray()
+                    .filter(function (obj) {
+                        return obj.type == "select" || obj.type == "radio" || obj.type == "region";
+                    })
+                    .map(function (obj) {
+                        return obj.name;
+                    });
             }
 
             const schemaRegions = this.mapsvg.regionsRepository.getSchema();
 
             if (schemaRegions) {
-                schemaRegions.getFieldsAsArray().forEach(function (obj) {
+                const regionFields = schemaRegions.getFieldsAsArray().map(function (obj) {
                     if (
                         obj.type == "status" ||
                         obj.type == "text" ||
@@ -116,17 +118,15 @@ export class FormElementFactory {
                         obj.type == "checkbox"
                     ) {
                         if (obj.type == "post") {
-                            regionFields.push("Region.post.post_title");
+                            return "Region.post.post_title";
                         } else {
-                            regionFields.push("Region." + obj.name);
+                            return "Region." + obj.name;
                         }
-                    }
-                    if (obj.type == "status" || obj.type == "select" || obj.type == "radio") {
-                        regionFieldsFilterable.push("Region." + obj.name);
                     }
                 });
             }
 
+            const regions = new ArrayIndexed("id");
             this.mapsvg.regions.forEach((region) => {
                 regions.push({ id: region.id, title: region.title });
             });
@@ -134,10 +134,8 @@ export class FormElementFactory {
 
         return {
             databaseFields: databaseFields,
-            databaseFieldsFilterable: databaseFieldsFilterable,
             databaseFieldsFilterableShort: databaseFieldsFilterableShort,
             regionFields: regionFields,
-            regionFieldsFilterable: regionFieldsFilterable,
             regions: regions,
             mapIsGeo: mapIsGeo,
             mediaUploader: this.mediaUploader,

@@ -104,7 +104,7 @@ export class DirectoryController extends Controller {
                 if (e.target.nodeName == "A") {
                     return;
                 }
-                // e.preventDefault();
+                e.preventDefault();
 
                 const objID = $(this).data("object-id");
 
@@ -114,7 +114,7 @@ export class DirectoryController extends Controller {
                 let eventObject;
 
                 _this.deselectItems();
-                _this.selectItems(objID, false);
+                _this.selectItems(objID);
 
                 if (MapSVG.isPhone && _this.mapsvg.options.menu.showMapOnClick) {
                     _this.toggle(false);
@@ -374,7 +374,7 @@ export class DirectoryController extends Controller {
         if (typeof ids != "object") ids = [ids];
         ids.forEach(function (id) {
             $(_this.containers.view)
-                .find("#mapsvg-directory-item-" + _this.convertId(id))
+                .find("#mapsvg-directory-item-" + id)
                 .addClass("hover");
         });
     }
@@ -390,20 +390,19 @@ export class DirectoryController extends Controller {
      * Highlights directory items
      * @param {array} ids - A list of object IDs
      */
-    selectItems(ids, scrollTo = true) {
+    selectItems(ids) {
+        const _this = this;
         if (typeof ids != "object") ids = [ids];
-        ids.forEach((id) => {
-            $(this.containers.view)
-                .find("#mapsvg-directory-item-" + this.convertId(id))
+        ids.forEach(function (id) {
+            $(_this.containers.view)
+                .find("#mapsvg-directory-item-" + id)
                 .addClass("selected");
         });
 
-        if (scrollTo && $("#mapsvg-directory-item-" + ids[0]).length > 0) {
-            this.scrollable &&
-                $(this.containers.contentWrap).nanoScroller({
-                    scrollTo: $(this.containers.view).find(
-                        "#mapsvg-directory-item-" + this.convertId(ids[0])
-                    ),
+        if ($("#mapsvg-directory-item-" + ids[0]).length > 0) {
+            _this.scrollable &&
+                $(_this.containers.contentWrap).nanoScroller({
+                    scrollTo: $(_this.containers.view).find("#mapsvg-directory-item-" + ids[0]),
                 });
         }
     }
@@ -420,7 +419,7 @@ export class DirectoryController extends Controller {
      */
     removeItems(ids) {
         $(this.containers.view)
-            .find("#mapsvg-directory-item-" + this.convertId(ids))
+            .find("#mapsvg-directory-item-" + ids)
             .remove();
     }
 
@@ -529,7 +528,6 @@ export class DirectoryController extends Controller {
                 items = _this.repository.getLoaded().map((r) => {
                     const data = r.getData();
                     data.objects = _this.mapsvg.getRegion(data.id).objects;
-                    data.id_no_spaces = data.id.split(" ").join("_");
                     return data;
                 });
             } else {
@@ -560,15 +558,14 @@ export class DirectoryController extends Controller {
                 $(this.containers.contentView).find(".mapsvg-category-item").addClass("active");
                 $(this.containers.contentView).find(".mapsvg-category-block").addClass("active");
                 const panel = $(this.containers.contentView).find(".mapsvg-category-block")[0];
-                if (panel) panel.style.maxHeight = panel.scrollHeight + "px";
+                panel.style.maxHeight = panel.scrollHeight + "px";
             } else if (!_this.mapsvg.options.menu.categories.collapse) {
                 $(this.containers.contentView).find(".mapsvg-category-item").addClass("active");
                 $(this.containers.contentView).find(".mapsvg-category-block").addClass("active");
                 const panels = $(this.containers.contentView).find(".mapsvg-category-block");
-                if (panels.length)
-                    panels.each(function (i, panel) {
-                        panel.style.maxHeight = panel.scrollHeight + "px";
-                    });
+                panels.each(function (i, panel) {
+                    panel.style.maxHeight = panel.scrollHeight + "px";
+                });
             }
         }
         this.updateTopShift();
@@ -626,12 +623,5 @@ export class DirectoryController extends Controller {
     addPagination(pager) {
         $(this.containers.contentView).append('<div class="mapsvg-pagination-container"></div>');
         $(this.containers.contentView).find(".mapsvg-pagination-container").html(pager);
-    }
-
-    convertId(id) {
-        return (id + "")
-            .split(" ")
-            .join("_")
-            .replace(/(:|\(|\)|\.|\[|\]|,|=|@)/g, "\\$1");
     }
 }

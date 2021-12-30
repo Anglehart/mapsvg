@@ -57,7 +57,28 @@ style="width: 100%;height:100%;z-index: -1;"></iframe>-->
                 </label>
             </div>
             <div>
-                <button id="btnCustomizationModal" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#customizationModal"><i class="mfa mfa-support"></i> Support</button>
+
+                <button id="btnCustomizationModal" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#customizationModal"><i class="mfa mfa-shopping-cart"></i> Customization</button>
+                <!-- MODAL -->
+                <div class="modal fade" id="customizationModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h4 class="modal-title" id="myModalLabel">Order customization</h4>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>The functionality that you need is missing? We can add it.</p>
+                                <p>Looking for somebody who can set up your map? We can do it.</p>
+                                <p>Our rate is $60 p/hour, min. order is 2 hours. Payment can be made by Paypal. if you're interested,
+                                    please open a support ticket in the "Paid customizations" category: <a href="https://mapsvg.ticksy.com" target="_blank">mapsvg.ticksy.com</a> (link opens in a new tab)</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

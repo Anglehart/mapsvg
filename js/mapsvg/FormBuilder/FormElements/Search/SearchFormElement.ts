@@ -6,15 +6,15 @@ import { SchemaField } from "../../../Infrastructure/Server/SchemaField";
 const $ = jQuery;
 
 export class SearchFormElement extends FormElement {
+    searchType: string;
     searchFallback: boolean;
+    noResultsText: string;
     width: string;
 
     constructor(options: SchemaField, formBuilder: FormBuilder, external: { [key: string]: any }) {
         super(options, formBuilder, external);
 
-        this.searchFallback = MapSVG.parseBoolean(options.searchFallback) || false;
-        this.width = options.width || "100%";
-        this.name = "search";
+        this.searchType = options.searchType || "fulltext";
     }
 
     setDomElements() {
@@ -22,7 +22,7 @@ export class SearchFormElement extends FormElement {
         this.inputs.text = $(this.domElements.main).find("input")[0];
     }
 
-    setEventHandlers(): void {
+    setEventHandlers() {
         super.setEventHandlers();
         $(this.inputs.text).on("change keyup paste", (e) => {
             this.setValue(e.target.value, false);
@@ -30,14 +30,11 @@ export class SearchFormElement extends FormElement {
         });
     }
 
-    setInputValue(value: string | null): void {
-        this.inputs.text.value = value;
-    }
-
     getSchema(): { [p: string]: any } {
         const schema = super.getSchema();
         schema.searchFallback = MapSVG.parseBoolean(this.searchFallback);
         schema.placeholder = this.placeholder;
+        schema.noResultsText = this.noResultsText;
         schema.width = this.width;
         return schema;
     }

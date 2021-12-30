@@ -17,18 +17,6 @@
         return options;
     };
 
-    MapSVGAdminSettingsController.prototype.reloadSvgFile = function (updateTitles) {
-        var server = new mapsvg.server();
-        server
-            .post("svgfile/reload", {
-                file: { relativeUrl: this.mapsvg.options.source },
-                updateTitles: updateTitles,
-            })
-            .done(function () {
-                window.location.reload();
-            });
-    };
-
     MapSVGAdminSettingsController.prototype.viewLoaded = function () {
         var _this = this;
 
@@ -138,12 +126,12 @@
                 }
                 _this.mapsvg.update({
                     source: path,
-                    initialViewBox: _data.svgDefault.viewBox,
+                    viewBox: _data.svgDefault.viewBox,
                     width: _data.svgDefault.width,
                     height: _data.svgDefault.height,
                 });
                 _this.admin.save(true).done(function () {
-                    _this.reloadSvgFile(true);
+                    window.location.reload();
                 });
             });
         }
@@ -162,7 +150,15 @@
             "click",
             function (e) {
                 let updateTitles = $(this).data("update-titles");
-                _this.reloadSvgFile(updateTitles);
+                var server = new mapsvg.server();
+                server
+                    .post("svgfile/reload", {
+                        file: { path: _this.mapsvg.options.source },
+                        updateTitles: updateTitles,
+                    })
+                    .done(function () {
+                        window.location.reload();
+                    });
             }
         );
         this.view.on("click", "#mapsvg-controls-file-change", function (e) {
@@ -176,7 +172,7 @@
             .find("#mapsvg-select2-map")
             .mselect2()
             .on("select2:select", function () {
-                var path = $(this).find("option:selected").attr("data-relative-url");
+                var path = $(this).find("option:selected").data("path");
                 change_file(path);
             });
 
@@ -190,11 +186,15 @@
 
         var w = $("#mapsvg-controls-width").val();
         var h = $("#mapsvg-controls-height").val();
-        if (_this.mapsvg.options.lockAspectRatio) {
-            w = Math.round((h * _this.mapsvg.svgDefault.width) / _this.mapsvg.svgDefault.height);
+        if ($("#mapsvg-controls-ratio").is(":checked")) {
+            w = Math.round(
+                (h * _this.mapsvg.getData().svgDefault.width) /
+                    _this.mapsvg.getData().svgDefault.height
+            );
             $("#mapsvg-controls-width").val(w);
         }
         _this.mapsvg.viewBoxSetBySize(w, h);
+        // _this.mapsvg.updateSize();
         _this.admin.resizeDashboard();
     };
     MapSVGAdminSettingsController.prototype.setHeight = function () {
@@ -202,11 +202,18 @@
 
         var w = $("#mapsvg-controls-width").val();
         var h = $("#mapsvg-controls-height").val();
-        if (_this.mapsvg.options.lockAspectRatio) {
-            h = Math.round((w * _this.mapsvg.svgDefault.height) / _this.mapsvg.svgDefault.width);
+        if ($("#mapsvg-controls-ratio").is(":checked")) {
+            h = Math.round(
+                (w * _this.mapsvg.getData().svgDefault.height) /
+                    _this.mapsvg.getData().svgDefault.width
+            );
             $("#mapsvg-controls-height").val(h);
         }
+        // _this.mapsvg.viewBoxSetBySize(w,h);
+        // _this.mapsvg.updateSize();
+        // _this.admin.resizeDashboard();
         _this.mapsvg.viewBoxSetBySize(w, h);
+        // _this.mapsvg.updateSize();
         _this.admin.resizeDashboard();
     };
     MapSVGAdminSettingsController.prototype.keepRatioClickHandler = function () {

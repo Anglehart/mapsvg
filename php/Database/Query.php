@@ -20,7 +20,7 @@ class Query {
 	public $perpage = 30;
 	public $sort    = array();
 
-	public function __construct($params)
+	public function __construct(array $params)
 	{
 		if(isset($params['withSchema'])){
 			$this->withSchema = filter_var($params['withSchema'], FILTER_VALIDATE_BOOLEAN);

@@ -16,7 +16,6 @@ export class TextFormElement extends FormElement {
     constructor(options: SchemaField, formBuilder: FormBuilder, external: { [key: string]: any }) {
         super(options, formBuilder, external);
         this.searchFallback = MapSVG.parseBoolean(options.searchFallback);
-        this.searchType = options.searchType;
         this.width =
             this.formBuilder.filtersHide && !this.formBuilder.modal
                 ? null

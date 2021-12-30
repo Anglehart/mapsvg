@@ -17,9 +17,6 @@ export class Repository {
         this.objects = new ArrayIndexed("id");
         this.completeChunks = 0;
     }
-    setNoFiltersNoLoad(value) {
-        this.noFiltersNoLoad = value;
-    }
     setDataSource(path) {
         this.setPath(path);
         this.query = new Query({ withSchema: true });
@@ -73,8 +70,8 @@ export class Repository {
             defer.resolve(object);
             this.events.trigger("created", this, [object]);
         })
-            .fail((response) => {
-            defer.reject(response);
+            .fail(() => {
+            defer.reject();
         });
         return defer;
     }
@@ -95,8 +92,8 @@ export class Repository {
                 const data = this.decodeData(response);
                 defer.resolve(data[this.objectNameSingle]);
             })
-                .fail((response) => {
-                defer.reject(response);
+                .fail(() => {
+                defer.reject();
             });
         }
         return defer;
@@ -108,26 +105,14 @@ export class Repository {
         if (typeof query !== "undefined") {
             this.query.update(query);
         }
-        if (this.noFiltersNoLoad && !this.query.hasFilters()) {
-            this.objects.clear();
-            this.events.trigger("loaded");
-            defer.resolve(this.getLoaded());
-            return defer;
-        }
-        if (!this.schema) {
-            this.query.update({ withSchema: true });
-        }
         this.server
             .get(this.path, this.query)
             .done((response) => {
-            if (!this.schema) {
-                this.query.update({ withSchema: false });
-            }
             this.loadDataFromResponse(response);
             defer.resolve(this.getLoaded());
         })
-            .fail((response) => {
-            defer.reject(response);
+            .fail(() => {
+            defer.reject();
         });
         return defer;
     }
@@ -155,8 +140,8 @@ export class Repository {
             defer.resolve(object);
             this.events.trigger("updated", this, object);
         })
-            .fail((response, stat) => {
-            defer.reject(response, stat);
+            .fail(() => {
+            defer.reject();
         });
         return defer;
     }
@@ -170,8 +155,8 @@ export class Repository {
             this.events.trigger("deleted");
             defer.resolve();
         })
-            .fail((response) => {
-            defer.reject(response);
+            .fail(() => {
+            defer.reject();
         });
         return defer;
     }
@@ -186,8 +171,8 @@ export class Repository {
             this.events.trigger("cleared");
             defer.resolve();
         })
-            .fail((response) => {
-            defer.reject(response);
+            .fail(() => {
+            defer.reject();
         });
         return defer;
     }
@@ -270,13 +255,8 @@ export class Repository {
                         convertLatlngToAddress: convertLatlngToAddress,
                     };
                     data[_this.objectNameMany] = JSON.stringify(chunk);
-                    _this.server
-                        .post(_this.path + "import", data)
-                        .done(function (_data) {
+                    _this.server.post(_this.path + "import", data).done(function (_data) {
                         _this.completeChunk(chunks, defer);
-                    })
-                        .fail((response) => {
-                        console.error(response);
                     });
                 }, delay);
             });
@@ -306,7 +286,7 @@ export class Repository {
                     switch (field.type) {
                         case "region":
                             newObject[key] = {};
-                            newObject[key] = object[key]
+                            newObject[key][regionsTable] = object[key]
                                 .split(",")
                                 .map(function (regionId) {
                                 return regionId.trim();
@@ -324,7 +304,7 @@ export class Repository {
                                         return item.title === rId;
                                     });
                                 }
-                                return { id: r.id, title: r.title, tableName: regionsTable };
+                                return { id: r.id, title: r.title };
                             });
                             break;
                         case "location":
@@ -373,28 +353,6 @@ export class Repository {
                                         return option.label == label;
                                     })[0];
                                 });
-                                if (newObject[key].length === 0) {
-                                    const values = _this.schema
-                                        .getField(key)
-                                        .options.map(function (f) {
-                                        return f.value + "";
-                                    });
-                                    newObject[key] = object[key]
-                                        .split(",")
-                                        .map(function (value) {
-                                        return value.trim();
-                                    })
-                                        .filter(function (value) {
-                                        return values.indexOf(value) !== -1;
-                                    })
-                                        .map(function (value) {
-                                        return _this.schema
-                                            .getField(key)
-                                            .options.filter(function (option) {
-                                            return option.value == value;
-                                        })[0];
-                                    });
-                                }
                             }
                             else {
                                 newObject[key] = object[key];

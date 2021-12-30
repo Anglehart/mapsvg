@@ -38,7 +38,7 @@
         {{#case "checkbox" break=true}}
         <td>{{lookup ../region name}}</td>{{/case}}
         {{#case "post" break=true}}
-            <td>{{getPostTitle ../region name}}</td>{{/case}}
+        <td>{{lookup ../region name}}</td>{{/case}}
         {{#case "select" break=true}}
         <td>{{#ifjson ../region name}} {{getSelectedOptions ../region name}} {{/ifjson}}
             {{#ifnotjson ../region name}} {{getLabel options ../region name}} {{/ifnotjson}}</td>{{/case}}
@@ -48,9 +48,9 @@
         {{#default break=true}}
             <td>{{lookup ../region name}}</td>{{/default}} {{/switch}} {{/each}}
         <td>
-            <div class="btn btn-outline-secondary btn-sm region-cpicker toggle-tooltip"
+            <button class="btn btn-outline-secondary btn-sm region-cpicker toggle-tooltip"
                     title="Color" style="background: {{fill}}"><i class="mfa mfa-paint-brush"></i>
-            </div>
+            </button>
         </td>
     </tr>
 </script>

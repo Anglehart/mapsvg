@@ -30,26 +30,15 @@ class MapsRepository extends Repository {
 	 *
 	 * @return array - Array of formatted parameters
 	 */
-	public function encodeParams($data, $convert = false)
-    {
+	public function encodeParams($data, $convert = false) {
 
-        if (is_object($data) && method_exists($data, 'getData')) {
-            $data = $data->getData();
-        }
+		if(method_exists($data, 'getData')){
+			$data = $data->getData();
+		}
 
-        if (isset($data['optionsBroken'])) {
-            unset($data['optionsBroken']);
-            unset($data['options']);
-        } else {
-            if (!$data['options']) {
-                // Don't save broken JSON
-                unset($data['options']);
-            } else {
-                if (!is_string($data['options'])) {
-                    $data['options'] = json_encode($data['options'], JSON_UNESCAPED_UNICODE);
-                }
-            }
-        }
+		if(!is_string($data['options'])){
+			$data['options'] = json_encode($data['options'], JSON_UNESCAPED_UNICODE);
+		}
 
 		return $data;
 	}
@@ -61,12 +50,7 @@ class MapsRepository extends Repository {
 			$data['id'] = (int)$data['id'];
 		}
 		if(isset($data['options'])){
-			$tryDecode = json_decode($data['options'], true);
-			if(!$tryDecode){
-			    $data['optionsBroken'] = true;
-            } else {
-			    $data['options'] = $tryDecode;
-            }
+			$data['options'] = json_decode($data['options'], true);
 		}
 		return $data;
 	}
@@ -91,15 +75,15 @@ class MapsRepository extends Repository {
 	 * @param array $data - map options
 	 * @return Map
 	 */
-	public function create($data, $skipRepoCreate = false){
+	public function create($data){
+
 
 		$map = parent::create($data);
 
-		if(!$skipRepoCreate){
-            $map->regions = RegionsRepository::createRepository('regions_' . $map->id);
-            $map->objects = ObjectsRepository::createRepository('objects_' . $map->id);
-            $map->setRegionsTable();
-        }
+		$map->regions = RegionsRepository::createRepository('regions_' . $map->id);
+		$map->objects = ObjectsRepository::createRepository('objects_' . $map->id);
+
+		$map->setRegionsTable();
 
 		return $map;
 	}
@@ -148,7 +132,7 @@ class MapsRepository extends Repository {
 	 * @return mixed
 	 * @throws \Exception
 	 */
-	public function copy($id, $newData){
+	public function copy($id, array $newData){
 
 //		require_once MAPSVG_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'php' . DIRECTORY_SEPARATOR . 'Domain'. DIRECTORY_SEPARATOR . 'SVGFile' . DIRECTORY_SEPARATOR . 'SVGFile.php';
 
@@ -157,12 +141,12 @@ class MapsRepository extends Repository {
 
 		// Copy SVG file
         $filesRepo = new SVGFileRepository();
-        $file = new SVGFile(["relativeUrl" => $map->options['source']]);
+        $file = new SVGFile(["path" => $map->options['source']]);
 
 		try {
             $newFile = $filesRepo->copy($file);
-			$map->options['source'] = $newFile->relativeUrl;
-			$map->setSvgFilePath($newFile->relativeUrl);
+			$map->options['source'] = $newFile->path;
+			$map->setSvgFilePath($newFile->path);
 		}catch (\Exception $err){
 			throw new \Exception('Can\'t copy the SVG file.', 400);
 		}
@@ -172,12 +156,12 @@ class MapsRepository extends Repository {
 		$newMapData['title'] = $newData['title'];
 		$newMapData['options']['title'] = $newData['title'];
 		unset($newMapData['id']);
-		$newMap = $this->create($newMapData,true);
+		$newMap = $this->create($newMapData);
 
 		if(isset($newMapData['options']['css'])){
 			$mapUpdate = array('id'=> $newMap->id, 'options'=>$newMapData['options']);
 			$mapUpdate['options']['css'] = str_replace('#mapsvg-map-'. $map->id, '#mapsvg-map-'.$newMap->id, $newMapData['options']['css']);
-//			$mapUpdate['options']['css'] = str_replace('#mapsvg-map-'. $map->id, '{{mapsvg_gallery '.$newMap->id, $newMapData['options']['css']);
+			$mapUpdate['options']['css'] = str_replace('#mapsvg-map-'. $map->id, '{{mapsvg_gallery '.$newMap->id, $newMapData['options']['css']);
 			$this->update($mapUpdate);
 		}
 
@@ -206,50 +190,21 @@ class MapsRepository extends Repository {
 		$tableNameRegionsOld = $this->db->mapsvg_prefix . $fromMap->regions->getSchema()->name;
 		$tableNameRegionsNew = $this->db->mapsvg_prefix . $newRegionsSchema->name;
 
-		$fields = $this->db->get_results("SHOW COLUMNS FROM ".$tableNameRegionsOld);
-		foreach($fields as $field){
-            $regionFieldNames[] = $field->Field;
-        }
-        $regionFieldNames = "`".implode("`,`", $regionFieldNames)."`";
-
-		$this->db->query("REPLACE INTO ".$tableNameRegionsNew." (".$regionFieldNames.") SELECT ".$regionFieldNames." FROM ".$tableNameRegionsOld);
+		$this->db->query("REPLACE INTO ".$tableNameRegionsNew." SELECT * FROM ".$tableNameRegionsOld);
 
 		// Copy objects table
 		$objectsSchemaData = $fromMap->objects->getSchema()->getData();
 		$objectsSchemaData['name'] = 'objects_'.$toMap->id;
-		// Fix missing auto_increment
-        foreach($objectsSchemaData["fields"] as $key=>$field){
-            if($field->name === "id" && !isset($field->auto_increment) && $field->auto_increment !== true){
-                $field->auto_increment = true;
-                $objectsSchemaData["fields"][$key] = $field;
-            }
-        }
-        $schema = new Schema($objectsSchemaData);
+		$schema = new Schema($objectsSchemaData);
 		$newObjectsSchema = $schemaRepo->create($schema->getData());
 
 		$tableNameObjectsOld = $this->db->mapsvg_prefix . $fromMap->objects->getSchema()->name;
 		$tableNameObjectsNew = $this->db->mapsvg_prefix . $newObjectsSchema->name;
 
-//        $this->db->query("ALTER TABLE ".$tableNameObjectsNew." CHANGE COLUMN `id` `id` INT(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT = 1");
-
-        $fields = $this->db->get_results("SHOW COLUMNS FROM ".$tableNameObjectsOld);
-        foreach($fields as $field){
-            $fieldNames[] = $field->Field;
-        }
-		$fieldNames = "`".implode("`,`", $fieldNames)."`";
-
-		$this->db->query("INSERT INTO ".$tableNameObjectsNew." (".$fieldNames.") SELECT ".$fieldNames." FROM ".$tableNameObjectsOld);
+		$this->db->query("INSERT INTO ".$tableNameObjectsNew." SELECT * FROM ".$tableNameObjectsOld);
 		$this->db->query("INSERT INTO ".$this->db->mapsvg_prefix."r2o  (objects_table,regions_table,object_id,region_id) SELECT '".$newObjectsSchema->name."', '".$newRegionsSchema->name."', _r2o.object_id, _r2o.region_id FROM ".$this->db->mapsvg_prefix."r2o _r2o WHERE _r2o.objects_table='".$fromMap->objects->getSchema()->name."' AND _r2o.regions_table='".$fromMap->regions->getSchema()->name."'");
 
-        $mapUpdate = array('id'=> $toMap->id, 'options'=>$toMap->options);
-        if(!isset($mapUpdate["options"]["database"])){
-            $mapUpdate["options"]["database"] = [];
-        }
-        $mapUpdate["options"]["database"]["regionsTableName"] = $newRegionsSchema->name;
-        $mapUpdate["options"]["database"]["objectsTableName"] = $newObjectsSchema->name;
-        $this->update($mapUpdate);
-
-        return true;
+		return true;
 	}
 
 	public function fillRegions(){

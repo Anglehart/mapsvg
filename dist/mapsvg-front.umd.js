@@ -311,13 +311,7 @@
     SVGElement.prototype.getTransformToElement =
         SVGElement.prototype.getTransformToElement ||
         function (toElement) {
-            let value;
-            try {
-                value = toElement.getScreenCTM().inverse().multiply(this.getScreenCTM());
-            } catch (e) {
-                return;
-            }
-            return value;
+            return toElement.getScreenCTM().inverse().multiply(this.getScreenCTM());
         };
 
     Map.prototype.toArray = function () {
@@ -422,91 +416,6 @@
         return color;
     };
 
-    /**
-     * Delays method execution.
-     * For example, it can be used in search input fields to prevent sending
-     * an ajax request on each key press.
-     * @param {Function} method
-     * @param {number} delay
-     * @param {object} scope
-     * @param {array} params
-     * @private
-     */
-    MapSVG.throttle = (method, delay, scope, params) => {
-        clearTimeout(method._tId);
-        method._tId = setTimeout(function () {
-            method.apply(scope, params);
-        }, delay);
-    };
-    MapSVG.geocode = (query, callback) => {
-        if (!window.google) {
-            console.error("MapSVG: can't do Geocoding - Google Maps API is not loaded.");
-            jQuery.growl.error({
-                title: "Error",
-                message: "Google Maps API files are not loaded",
-            });
-            return false;
-        }
-        if (!MapSVG.options.google_api_key) {
-            jQuery.growl.error({
-                title: "Error",
-                message: "Google Maps API key is not provided",
-            });
-            return false;
-        }
-        if (!MapSVG.geocoder) {
-            MapSVG.geocoder = new google.maps.Geocoder();
-        }
-
-        MapSVG.throttle(MapSVG.geocoder.geocode, 500, MapSVG.geocoder, [
-            query,
-            function (results, status) {
-                if (status === "OK") {
-                    callback(results);
-                } else {
-                    jQuery.growl.error({
-                        title: "Error: " + status,
-                        message:
-                            "There is some problem with Google API keys. See browser's console for more details",
-                    });
-                }
-            },
-        ]);
-    };
-
-    MapSVG.handleFailedRequest = (response) => {
-        var message = "";
-
-        if (response.status === 403) {
-            if (response.responseText.indexOf("Wordfence") !== -1) {
-                message +=
-                    "The request has been blocked by Wordfence. " +
-                    'Switch Wordfence to "Learning mode", and save the map settings again. ' +
-                    "If the settings are saved successfully, you can switch Wordfence back to normal mode.";
-            } else {
-                message +=
-                    "The request has been blocked by your server. " +
-                    "Do you have mod_sec Apache's module enabled? If that's the case you need to change its settings.";
-            }
-        } else {
-            if (response && response.responseText) {
-                try {
-                    var _response = JSON.parse(response.responseText);
-                    if (_response && _response.data && _response.data.error) {
-                        message = _response.data.error;
-                    }
-                } catch (e) {
-                }
-            }
-        }
-
-        $.growl.error({
-            title: "Error: " + response.status + " " + response.statusText,
-            message: message,
-            duration: 30000,
-        });
-    };
-
     if (!Object.values) {
         Object.values = function (object) {
             return Object.keys(object).map(function (k) {
@@ -519,7 +428,7 @@
 
     const defRegionTemplate = "<div>\n" +
         "  <p>This is the demo content of the <strong>Region %templateType%</strong>.</p>\n" +
-        '  <p>How to edit it: if you are in mapsvg control panel now, click on the following link to open the template editor for this view: <a href="#" class="mapsvg-template-link" data-template="%templateTypeSnake%Region">Menu > Templates > Region %templateType%</a>.</p>\n' +
+        '  <p>Click on the following link to edit the content of this window: <a href="#" class="mapsvg-template-link" data-template="%templateTypeSnake%Region">Menu > Templates > Region %templateType%</a>.</p>\n' +
         '  <p>More information about templates: <a href="https://mapsvg.com/docs/map-editor/templates" target="_blank">mapsvg.com/docs/map-editor/templates</a></p>\n' +
         "</div>\n" +
         "<hr />\n\n" +
@@ -542,7 +451,7 @@
         "{{/each}}";
     const defDBTemplate = "<div>\n" +
         "  <p>This is the demo content of the <strong>DB Object %templateType%</strong>.</p>\n" +
-        '  <p>How to edit it: if you are in mapsvg control panel now, click on the following link to open the template editor for this view: <a href="#" class="mapsvg-template-link" data-template="%templateTypeSnake%">Menu > Templates > DB Object %templateType%</a>.</p>\n' +
+        '  <p>Click on the following link to edit the content of this window: <a href="#" class="mapsvg-template-link" data-template="%templateTypeSnake%Region">Menu > Templates > Region %templateType%</a>.</p>\n' +
         '  <p>More information about templates: <a href="https://mapsvg.com/docs/map-editor/templates" target="_blank">mapsvg.com/docs/map-editor/templates</a></p>\n' +
         "</div>\n" +
         "<hr />\n\n" +
@@ -855,7 +764,7 @@
                 perpage: 30,
                 next: "Next",
                 prev: "Prev.",
-                showIn: "both",
+                showIn: "directory",
             },
             loadOnStart: true,
             table: "",
@@ -933,7 +842,6 @@
             minZoom: 1,
             style: "default",
             styleJSON: [],
-            language: "en",
         },
         groups: [],
         floors: [],
@@ -2255,7 +2163,7 @@
     const $$1 = jQuery;
     class Server {
         constructor() {
-            this.apiUrl = MapSVG.urls.api;
+            this.apiUrl = "/wp-json/mapsvg/v1/";
         }
         getUrl(path) {
             return this.apiUrl + path;
@@ -2277,7 +2185,7 @@
                 data: data,
                 beforeSend: function (xhr) {
                     xhr.setRequestHeader("X-WP-Nonce", MapSVG.nonce());
-                },
+                }
             };
             if (data instanceof FormData) {
                 ajaxParams["processData"] = false;
@@ -2288,12 +2196,11 @@
         put(path, data) {
             const ajaxParams = {
                 url: this.apiUrl + path,
-                type: "POST",
+                type: "PUT",
                 data: data,
                 beforeSend: function (xhr) {
                     xhr.setRequestHeader("X-WP-Nonce", MapSVG.nonce());
-                    xhr.setRequestHeader("X-HTTP-Method-Override", "PUT");
-                },
+                }
             };
             if (data instanceof FormData) {
                 ajaxParams["processData"] = false;
@@ -2304,11 +2211,10 @@
         delete(path, data) {
             return $$1.ajax({
                 url: this.apiUrl + path,
-                type: "POST",
+                type: "DELETE",
                 data: data,
                 beforeSend: function (xhr) {
                     xhr.setRequestHeader("X-WP-Nonce", MapSVG.nonce());
-                    xhr.setRequestHeader("X-HTTP-Method-Override", "DELETE");
                 },
             });
         }
@@ -2336,7 +2242,15 @@
             else {
                 callbackFunction = callbackOrObjectType;
             }
-            this.events[event].push(callbackFunction);
+            let duplicatedEvent = false;
+            this.events[event].forEach(function (existingCallback) {
+                if (existingCallback.toString() === callbackFunction.toString()) {
+                    duplicatedEvent = true;
+                }
+            });
+            if (duplicatedEvent === false) {
+                this.events[event].push(callbackFunction);
+            }
             return this;
         }
         off(event, callback) {
@@ -2674,7 +2588,7 @@
             this.filters[field] = value;
         }
         hasFilters() {
-            return Object.keys(this.filters).length > 0 || this.search.length > 0;
+            return Object.keys(this.filters).length > 0;
         }
         removeFilter(fieldName) {
             this.filters[fieldName] = null;
@@ -2751,9 +2665,6 @@
             this.x = _x;
             this.y = _y;
         }
-        toString() {
-            return this.x + "," + this.y;
-        }
     }
     class GeoPoint {
         constructor(lat, lng) {
@@ -2776,18 +2687,12 @@
             this.lat = _lat;
             this.lng = _lng;
         }
-        toString() {
-            return this.lat + "," + this.lng;
-        }
     }
     class Location {
         constructor(options) {
             this.update(options);
         }
         update(options) {
-            if (options.object) {
-                this.setObject(options.object);
-            }
             if (options.img) {
                 this.setImage(options.img);
             }
@@ -2801,9 +2706,6 @@
                 this.setGeoPoint(options.geoPoint);
             }
         }
-        setObject(object) {
-            this.object = object;
-        }
         setImage(imgUrl) {
             if (typeof imgUrl !== "string") {
                 return;
@@ -2814,7 +2716,9 @@
             }
             this.img = src;
             this.imagePath = this.getImageUrl();
-            this.marker && this.marker && this.marker.setImage(this.imagePath);
+            if (this.marker && this.marker.src !== this.imagePath) {
+                this.marker.setImage(this.imagePath);
+            }
         }
         getImageUrl() {
             if (this.img && this.img.indexOf("uploads/") === 0) {
@@ -2839,7 +2743,7 @@
                 this.marker.setSvgPointFromLocation();
             }
         }
-        getMarkerImage() {
+        getMarkerImageUrl() {
             if (this.img && this.img.indexOf("uploads/") === 0) {
                 return MapSVG.urls.uploads + "markers/" + this.img.replace("uploads/", "");
             }
@@ -2851,9 +2755,6 @@
             const data = {
                 img: this.img,
                 imagePath: this.imagePath,
-                markerImagePath: this.marker && this.marker.object
-                    ? this.marker.object.getMarkerImage()
-                    : this.imagePath,
                 address: this.address,
             };
             if (this.geoPoint) {
@@ -2869,7 +2770,8 @@
     class CustomObject {
         constructor(params, schema) {
             this.initialLoad = true;
-            this.setSchema(schema);
+            this.schema = schema;
+            this.fields = schema.getFieldNames();
             this.dirtyFields = [];
             this.regions = [];
             this._regions = {};
@@ -2882,12 +2784,6 @@
             if (this.id) {
                 this.clearDirtyFields();
             }
-        }
-        setSchema(schema) {
-            this.schema = schema;
-            this.schema.events.on("changed", () => this.setLocationField());
-            this.fields = schema.getFieldNames();
-            this.setLocationField();
         }
         build(params) {
             for (const fieldName in params) {
@@ -2905,9 +2801,7 @@
                                 params[fieldName] != "" &&
                                 Object.keys(params[fieldName]).length !== 0) {
                                 const data = {
-                                    img: this.isMarkersByFieldEnabled()
-                                        ? this.getMarkerImage()
-                                        : params[fieldName].img,
+                                    img: params[fieldName].img,
                                     address: new LocationAddress(params[fieldName].address),
                                 };
                                 if (params[fieldName].geoPoint &&
@@ -2952,62 +2846,10 @@
                     }
                 }
             }
-            const locationField = this.getLocationField();
-            if (locationField && this.isMarkersByFieldEnabled() && this.isMarkerFieldChanged(params)) {
-                this.reloadMarkerImage();
-            }
-        }
-        isMarkerFieldChanged(params) {
-            return Object.keys(params).indexOf(this.getLocationField().markerField) !== -1;
-        }
-        setLocationField() {
-        }
-        getLocationField() {
-            return this.schema.getFieldByType("location");
-        }
-        reloadMarkerImage() {
-            this.location && this.location.setImage(this.getMarkerImage());
-        }
-        getMarkerImage() {
-            let fieldValue;
-            if (this.isMarkersByFieldEnabled()) {
-                const locationField = this.getLocationField();
-                fieldValue = this[locationField.markerField];
-                if (!fieldValue) {
-                    return locationField.defaultMarkerPath || MapSVG.defaultMarkerImage;
-                }
-                else {
-                    if (locationField.markerField === "regions") {
-                        fieldValue = fieldValue[0] && fieldValue[0].id;
-                    }
-                    else if (typeof fieldValue === "object" && fieldValue.length) {
-                        fieldValue = fieldValue[0].value;
-                    }
-                    return (locationField.markersByField[fieldValue] ||
-                        locationField.defaultMarkerPath ||
-                        MapSVG.defaultMarkerImage);
-                }
-            }
-            else {
-                return this.location.imagePath;
-            }
-        }
-        isMarkersByFieldEnabled() {
-            const locationField = this.getLocationField();
-            if (!locationField) {
-                return false;
-            }
-            if (locationField.markersByFieldEnabled &&
-                locationField.markerField &&
-                Object.values(locationField.markersByField).length > 0) {
-                return true;
-            }
-            else {
-                return false;
-            }
         }
         clone() {
             const data = this.getData();
+            data.id = null;
             return new CustomObject(data, this.schema);
         }
         getEnumLabel(field, params, fieldName) {
@@ -3056,8 +2898,6 @@
                     case "post":
                         data[field.name] = this[field.name];
                         data["post"] = this.post;
-                        break;
-                    case "status":
                     case "radio":
                         data[field.name] = this[field.name];
                         data[field.name + "_text"] = this[field.name + "_text"];
@@ -3094,9 +2934,6 @@
             this.setPath(path);
             this.objects = new ArrayIndexed("id");
             this.completeChunks = 0;
-        }
-        setNoFiltersNoLoad(value) {
-            this.noFiltersNoLoad = value;
         }
         setDataSource(path) {
             this.setPath(path);
@@ -3151,8 +2988,8 @@
                 defer.resolve(object);
                 this.events.trigger("created", this, [object]);
             })
-                .fail((response) => {
-                defer.reject(response);
+                .fail(() => {
+                defer.reject();
             });
             return defer;
         }
@@ -3173,8 +3010,8 @@
                     const data = this.decodeData(response);
                     defer.resolve(data[this.objectNameSingle]);
                 })
-                    .fail((response) => {
-                    defer.reject(response);
+                    .fail(() => {
+                    defer.reject();
                 });
             }
             return defer;
@@ -3186,26 +3023,14 @@
             if (typeof query !== "undefined") {
                 this.query.update(query);
             }
-            if (this.noFiltersNoLoad && !this.query.hasFilters()) {
-                this.objects.clear();
-                this.events.trigger("loaded");
-                defer.resolve(this.getLoaded());
-                return defer;
-            }
-            if (!this.schema) {
-                this.query.update({ withSchema: true });
-            }
             this.server
                 .get(this.path, this.query)
                 .done((response) => {
-                if (!this.schema) {
-                    this.query.update({ withSchema: false });
-                }
                 this.loadDataFromResponse(response);
                 defer.resolve(this.getLoaded());
             })
-                .fail((response) => {
-                defer.reject(response);
+                .fail(() => {
+                defer.reject();
             });
             return defer;
         }
@@ -3233,8 +3058,8 @@
                 defer.resolve(object);
                 this.events.trigger("updated", this, object);
             })
-                .fail((response, stat) => {
-                defer.reject(response, stat);
+                .fail(() => {
+                defer.reject();
             });
             return defer;
         }
@@ -3248,8 +3073,8 @@
                 this.events.trigger("deleted");
                 defer.resolve();
             })
-                .fail((response) => {
-                defer.reject(response);
+                .fail(() => {
+                defer.reject();
             });
             return defer;
         }
@@ -3264,8 +3089,8 @@
                 this.events.trigger("cleared");
                 defer.resolve();
             })
-                .fail((response) => {
-                defer.reject(response);
+                .fail(() => {
+                defer.reject();
             });
             return defer;
         }
@@ -3346,13 +3171,8 @@
                             convertLatlngToAddress: convertLatlngToAddress,
                         };
                         data[_this.objectNameMany] = JSON.stringify(chunk);
-                        _this.server
-                            .post(_this.path + "import", data)
-                            .done(function (_data) {
+                        _this.server.post(_this.path + "import", data).done(function (_data) {
                             _this.completeChunk(chunks, defer);
-                        })
-                            .fail((response) => {
-                            console.error(response);
                         });
                     }, delay);
                 });
@@ -3381,7 +3201,7 @@
                         switch (field.type) {
                             case "region":
                                 newObject[key] = {};
-                                newObject[key] = object[key]
+                                newObject[key][regionsTable] = object[key]
                                     .split(",")
                                     .map(function (regionId) {
                                     return regionId.trim();
@@ -3399,7 +3219,7 @@
                                             return item.title === rId;
                                         });
                                     }
-                                    return { id: r.id, title: r.title, tableName: regionsTable };
+                                    return { id: r.id, title: r.title };
                                 });
                                 break;
                             case "location":
@@ -3448,28 +3268,6 @@
                                             return option.label == label;
                                         })[0];
                                     });
-                                    if (newObject[key].length === 0) {
-                                        const values = _this.schema
-                                            .getField(key)
-                                            .options.map(function (f) {
-                                            return f.value + "";
-                                        });
-                                        newObject[key] = object[key]
-                                            .split(",")
-                                            .map(function (value) {
-                                            return value.trim();
-                                        })
-                                            .filter(function (value) {
-                                            return values.indexOf(value) !== -1;
-                                        })
-                                            .map(function (value) {
-                                            return _this.schema
-                                                .getField(key)
-                                                .options.filter(function (option) {
-                                                return option.value == value;
-                                            })[0];
-                                        });
-                                    }
                                 }
                                 else {
                                     newObject[key] = object[key];
@@ -3504,7 +3302,6 @@
                 data.options = data.options.replace(/table/g, "!mapsvg-encoded-tbl");
                 data.options = data.options.replace(/database/g, "!mapsvg-encoded-db");
                 data.options = data.options.replace(/varchar/g, "!mapsvg-encoded-vc");
-                data.options = data.options.replace(/int\(11\)/g, "!mapsvg-encoded-int");
             }
             if (typeof params.title !== "undefined") {
                 data.title = params.title;
@@ -3813,9 +3610,6 @@
         toArray() {
             return [this.x, this.y, this.width, this.height];
         }
-        clone() {
-            return new ViewBox({ x: this.x, y: this.y, width: this.width, height: this.height });
-        }
         fitsInViewBox(viewBox, atLeastByOneDimension) {
             if (atLeastByOneDimension === true) {
                 return viewBox.width > this.width || viewBox.height > this.height;
@@ -3870,9 +3664,6 @@
         }
         getComputedStyle(prop, elem) {
             elem = elem || this.element;
-            return MapObject.getComputedStyle(prop, elem);
-        }
-        static getComputedStyle(prop, elem) {
             const _p1 = elem.getAttribute(prop);
             if (_p1) {
                 return _p1;
@@ -3893,7 +3684,7 @@
             const parent = elem.parentElement;
             const elemType = parent ? parent.tagName : null;
             if (elemType && elemType != "svg")
-                return MapObject.getComputedStyle(prop, parent);
+                return this.getComputedStyle(prop, parent);
             else
                 return undefined;
         }
@@ -3964,20 +3755,14 @@
     class Marker extends MapObject {
         constructor(params) {
             super(null, params.mapsvg);
+            this.src = params.location.getMarkerImageUrl();
             this.element = $$5("<div />").addClass("mapsvg-marker")[0];
-            this.image = $$5('<img src="" />').addClass("mapsvg-marker-image")[0];
-            if (params.object) {
-                this.setObject(params.object);
-            }
-            if (!(params.location instanceof Location)) {
-                throw new Error("MapSVG.Marker: no Location provided for Marker initializaton");
-            }
-            else {
-                this.location = params.location;
-                this.location.marker = this;
-            }
-            this.setImage(this.location.imagePath);
+            this.image = $$5('<img src="' + this.src + '" />').addClass("mapsvg-marker-image")[0];
             $$5(this.element).append(this.image);
+            this.location = params.location;
+            this.location.marker = this;
+            this.mapsvg = params.mapsvg;
+            params.object && this.setObject(params.object);
             if (params.width && params.height) {
                 this.setSize(params.width, params.height);
             }
@@ -3986,14 +3771,8 @@
             }
             this.setId(this.mapsvg.markerId());
             this.setSvgPointFromLocation();
+            this.setImage(this.src);
             this.setAltAttr();
-        }
-        reload() {
-            this.setImage();
-            this.setSvgPointFromLocation();
-        }
-        getImagePath() {
-            return (this.object && this.object.getMarkerImage()) || this.location.getMarkerImage();
         }
         setSize(width, height) {
             this.width = width;
@@ -4043,21 +3822,24 @@
                     this[setter](data[key]);
             }
         }
-        setImage(src, skipChangingLocationImage = false) {
-            if (!src) {
-                src = this.getImagePath();
-            }
-            this.src = MapSVG.safeURL(src);
+        setImage(src) {
+            if (!src)
+                return;
+            src = MapSVG.safeURL(src);
             const img = new Image();
             const marker = this;
+            this.src = src;
+            if (marker.image.getAttribute("src") !== "src") {
+                marker.image.setAttribute("src", src);
+            }
             img.onload = function () {
-                if (marker.image.getAttribute("src") !== "src") {
-                    marker.image.setAttribute("src", marker.src);
-                }
                 marker.setSize(this.width, this.height);
                 marker.adjustScreenPosition();
             };
-            img.src = this.src;
+            img.src = src;
+            if (this.location && this.location.imagePath !== src) {
+                this.location.setImage(src);
+            }
             this.events.trigger("change");
         }
         setAltAttr() {
@@ -4306,19 +4088,11 @@
             }
         }
         setLabel(html) {
-            if (html) {
-                if (!this.label) {
-                    this.label = $$5("<div />").addClass("mapsvg-marker-label")[0];
-                    $$5(this.element).append(this.label);
-                }
-                $$5(this.label).html(html);
+            if (!this.label) {
+                this.label = $$5("<div />").addClass("mapsvg-marker-label")[0];
+                $$5(this.element).append(this.label);
             }
-            else {
-                if (this.label) {
-                    $$5(this.label).remove();
-                    delete this.label;
-                }
-            }
+            $$5(this.label).html(html);
         }
         setCentered(on) {
             this.centered = on;
@@ -4492,9 +4266,8 @@
             let w;
             w = this.getComputedStyle("stroke-width");
             w = w ? w.replace("px", "") : "1";
-            w = parseFloat(w);
+            w = w == "1" ? 1.2 : parseFloat(w);
             this.style["stroke-width"] = w;
-            $$7(this.element).attr("data-stroke-width", w);
         }
         saveState() {
             this.initialState = JSON.stringify(this.getOptions());
@@ -4503,9 +4276,6 @@
             const _bbox = this.element.getBBox();
             const bbox = new ViewBox(_bbox.x, _bbox.y, _bbox.width, _bbox.height);
             const matrix = this.element.getTransformToElement(this.mapsvg.containers.svg);
-            if (!matrix) {
-                return _bbox;
-            }
             const x2 = bbox.x + bbox.width;
             const y2 = bbox.y + bbox.height;
             let position = this.mapsvg.containers.svg.createSVGPoint();
@@ -4547,6 +4317,7 @@
             };
             if (forTemplate) {
                 o.disabled = this.disabled;
+                o.dataCounter = (this.data && this.data.length) || 0;
             }
             for (const key in o) {
                 if (typeof o[key] === "undefined") {
@@ -4568,11 +4339,9 @@
                 objects: this.objects,
                 data: this.data,
             };
-            if (this.data) {
-                for (const key in this.data) {
-                    if (key != "title" && key != "id")
-                        data[key] = this.data[key];
-                }
+            for (const key in this.data) {
+                if (key != "title" && key != "id")
+                    data[key] = this.data[key];
             }
             return data;
         }
@@ -4758,18 +4527,14 @@
             const statusOptions = this.mapsvg.options.regionStatuses && this.mapsvg.options.regionStatuses[status];
             if (statusOptions) {
                 this.status = status;
-                if (this.data) {
-                    this.data.status = status;
-                    this.data.status_text = statusOptions.label;
-                }
+                this.data.status = status;
+                this.data.status_text = statusOptions.label;
                 this.setDisabled(statusOptions.disabled, true);
             }
             else {
                 this.status = undefined;
-                if (this.data) {
-                    this.data.status = undefined;
-                    this.data.status_text = undefined;
-                }
+                this.data.status = undefined;
+                this.data.status_text = undefined;
                 this.setDisabled(false, true);
             }
             this.setFill();
@@ -4820,9 +4585,7 @@
         }
         setData(data) {
             this.data = data;
-            if (typeof data.title !== "undefined") {
-                this.setTitle(data.title);
-            }
+            this.setTitle(data.title);
         }
         drawBubble() {
             if (this.data) {
@@ -4951,10 +4714,7 @@
             fieldsJsonString = fieldsJsonString.replace(/table/g, "!mapsvg-encoded-tbl");
             fieldsJsonString = fieldsJsonString.replace(/database/g, "!mapsvg-encoded-db");
             fieldsJsonString = fieldsJsonString.replace(/varchar/g, "!mapsvg-encoded-vc");
-            fieldsJsonString = fieldsJsonString.replace(/int\(11\)/g, "!mapsvg-encoded-int");
-            const back = JSON.parse(fieldsJsonString);
-            back.fields = JSON.stringify(_schema.fields);
-            return back;
+            return JSON.parse(fieldsJsonString);
         }
     }
 
@@ -5004,10 +4764,12 @@
             const _this = this;
             $$8(this.containers.contentWrap).nanoScroller({
                 preventPageScrolling: true,
+                iOSNativeScrolling: true,
             });
             setTimeout(function () {
                 $$8(_this.containers.contentWrap).nanoScroller({
                     preventPageScrolling: true,
+                    iOSNativeScrolling: true,
                 });
             }, 300);
         }
@@ -5070,7 +4832,7 @@
         viewReadyToFill() {
             const _this = this;
             if (_this.autoresize) {
-                _this.resizeSensor = new ResizeSensor(this.containers.sizer, () => {
+                _this.resizeSensor = new ResizeSensor(this.containers.sizer, function () {
                     _this.adjustHeight();
                     _this.updateScroll();
                     _this.events.trigger("resize", this, [this]);
@@ -5183,13 +4945,14 @@
                 if (e.target.nodeName == "A") {
                     return;
                 }
+                e.preventDefault();
                 const objID = $$9(this).data("object-id");
                 let regions;
                 let marker;
                 let detailsViewObject;
                 let eventObject;
                 _this.deselectItems();
-                _this.selectItems(objID, false);
+                _this.selectItems(objID);
                 if (MapSVG.isPhone && _this.mapsvg.options.menu.showMapOnClick) {
                     _this.toggle(false);
                 }
@@ -5425,25 +5188,27 @@
                 ids = [ids];
             ids.forEach(function (id) {
                 $$9(_this.containers.view)
-                    .find("#mapsvg-directory-item-" + _this.convertId(id))
+                    .find("#mapsvg-directory-item-" + id)
                     .addClass("hover");
             });
         }
         unhighlightItems() {
             $$9(this.containers.view).find(".mapsvg-directory-item").removeClass("hover");
         }
-        selectItems(ids, scrollTo = true) {
+        selectItems(ids) {
+            const _this = this;
             if (typeof ids != "object")
                 ids = [ids];
-            ids.forEach((id) => {
-                $$9(this.containers.view)
-                    .find("#mapsvg-directory-item-" + this.convertId(id))
+            this.deselectItems();
+            ids.forEach(function (id) {
+                $$9(_this.containers.view)
+                    .find("#mapsvg-directory-item-" + id)
                     .addClass("selected");
             });
-            if (scrollTo && $$9("#mapsvg-directory-item-" + ids[0]).length > 0) {
-                this.scrollable &&
-                    $$9(this.containers.contentWrap).nanoScroller({
-                        scrollTo: $$9(this.containers.view).find("#mapsvg-directory-item-" + this.convertId(ids[0])),
+            if ($$9("#mapsvg-directory-item-" + ids[0]).length > 0) {
+                _this.scrollable &&
+                    $$9(_this.containers.contentWrap).nanoScroller({
+                        scrollTo: $$9(_this.containers.view).find("#mapsvg-directory-item-" + ids[0]),
                     });
             }
         }
@@ -5452,7 +5217,7 @@
         }
         removeItems(ids) {
             $$9(this.containers.view)
-                .find("#mapsvg-directory-item-" + this.convertId(ids))
+                .find("#mapsvg-directory-item-" + ids)
                 .remove();
         }
         filterOut(items) {
@@ -5512,7 +5277,6 @@
                     items = _this.repository.getLoaded().map((r) => {
                         const data = r.getData();
                         data.objects = _this.mapsvg.getRegion(data.id).objects;
-                        data.id_no_spaces = data.id.split(" ").join("_");
                         return data;
                     });
                 }
@@ -5542,17 +5306,15 @@
                     $$9(this.containers.contentView).find(".mapsvg-category-item").addClass("active");
                     $$9(this.containers.contentView).find(".mapsvg-category-block").addClass("active");
                     const panel = $$9(this.containers.contentView).find(".mapsvg-category-block")[0];
-                    if (panel)
-                        panel.style.maxHeight = panel.scrollHeight + "px";
+                    panel.style.maxHeight = panel.scrollHeight + "px";
                 }
                 else if (!_this.mapsvg.options.menu.categories.collapse) {
                     $$9(this.containers.contentView).find(".mapsvg-category-item").addClass("active");
                     $$9(this.containers.contentView).find(".mapsvg-category-block").addClass("active");
                     const panels = $$9(this.containers.contentView).find(".mapsvg-category-block");
-                    if (panels.length)
-                        panels.each(function (i, panel) {
-                            panel.style.maxHeight = panel.scrollHeight + "px";
-                        });
+                    panels.each(function (i, panel) {
+                        panel.style.maxHeight = panel.scrollHeight + "px";
+                    });
                 }
             }
             this.updateTopShift();
@@ -5591,12 +5353,6 @@
             $$9(this.containers.contentView).append('<div class="mapsvg-pagination-container"></div>');
             $$9(this.containers.contentView).find(".mapsvg-pagination-container").html(pager);
         }
-        convertId(id) {
-            return (id + "")
-                .split(" ")
-                .join("_")
-                .replace(/(:|\(|\)|\.|\[|\]|,|=|@)/g, "\\$1");
-        }
     }
 
     const $$a = jQuery;
@@ -5618,7 +5374,7 @@
                 MapSVG.isPhone &&
                 this.mapsvg.options.detailsView.mobileFullscreen &&
                 !this.mobileCloseBtn) {
-                this.mobileCloseBtn = $$a('<button class="mapsvg-mobile-modal-close">' +
+                this.mobileCloseBtn = $$a('<button class="mapsvg-mobile-modal-close mapsvg-btn">' +
                     _this.mapsvg.options.mobileView.labelClose +
                     "</button>")[0];
                 this.containers.view.appendChild(this.mobileCloseBtn);
@@ -5626,12 +5382,7 @@
         }
         setEventHandlers() {
             const _this = this;
-            $$a(this.containers.toolbar).on("click touchend", ".mapsvg-popover-close", function (e) {
-                e.stopPropagation();
-                _this.destroy();
-                _this.events.trigger("closed", _this, [_this]);
-            });
-            $$a(this.containers.view).on("click touchend", ".mapsvg-mobile-modal-close", function (e) {
+            $$a(this.containers.toolbar).on("click", ".mapsvg-popover-close, .mapsvg-mobile-modal-close", function (e) {
                 e.stopPropagation();
                 _this.destroy();
                 _this.events.trigger("closed", _this, [_this]);
@@ -5739,7 +5490,7 @@
                             options: options,
                         };
                     }
-                    else if (fieldName === "title") {
+                    else if (fieldName == "region_title") {
                         const options = [];
                         _this.formBuilder.mapsvg.regions.forEach(function (r) {
                             options.push({ label: r.title, value: r.title });
@@ -5752,20 +5503,18 @@
                             .getField(fieldName);
                     }
                 }
-                if ((field && field.options) || fieldName === "regions") {
+                if (field && field.options) {
                     let options;
                     if (fieldName == "regions") {
-                        const _options = _this.formBuilder.mapsvg.regions.map((r) => {
-                            return { id: r.id, title: r.title };
-                        });
-                        _options.sort(function (a, b) {
-                            if (a.title < b.title)
-                                return -1;
-                            if (a.title > b.title)
-                                return 1;
-                            return 0;
-                        });
-                        options = _options.map(function (o) {
+                        if (field.options[0].title && field.options[0].title.length)
+                            field.options.sort(function (a, b) {
+                                if (a.title < b.title)
+                                    return -1;
+                                if (a.title > b.title)
+                                    return 1;
+                                return 0;
+                            });
+                        options = field.options.map(function (o) {
                             return (o.title || o.id) + ":" + o.id;
                         });
                     }
@@ -5992,6 +5741,7 @@
             }
         }
         redraw() {
+            const _this = this;
             const newView = $$b(this.templates.main(this.getDataForTemplate()));
             $$b(this.domElements.main).html(newView.html());
             if ($$b().mselect2) {
@@ -6013,12 +5763,10 @@
                     });
                 }
             }
-        }
-        redrawEditor() {
             if (this.domElements.edit) {
                 $$b(this.domElements.edit).empty();
                 $$b(this.domElements.edit).html("<div>" + this.templates.edit(this.getDataForTemplate()) + "</div>");
-                this.initEditor();
+                _this.initEditor();
             }
         }
         setOptions(options) {
@@ -6119,12 +5867,12 @@
                 if (this.showAsSwitch) {
                     $$c(this.domElements.main)
                         .find("[name='checkboxToSwitch']")
-                        .addClass("form-switch form-switch-md");
+                        .addClass("form-switch form-check form-switch-md");
                 }
                 if (!this.showAsSwitch) {
                     $$c(this.domElements.main)
                         .find("[name='checkboxToSwitch']")
-                        .removeClass("form-switch form-switch-md");
+                        .removeClass("form-switch form-check form-switch-md");
                 }
             });
             $$c(this.domElements.edit).on("keyup change paste", '[name="checkboxLabel"]', (e) => {
@@ -6174,14 +5922,9 @@
             });
         }
         setInputValue(values) {
-            if (values === null) {
-                $$d(this.domElements.main).find(`input`).prop("checked", false);
-            }
-            else {
-                values.forEach((value) => {
-                    $$d(this.domElements.main).find(`input[value="${value}"]`).prop("checked", true);
-                });
-            }
+            values.forEach((value) => {
+                $$d(this.domElements.main).find(`input[value="${value}"]`).prop("checked", true);
+            });
         }
     }
 
@@ -6428,7 +6171,7 @@
             this.country = options.country;
             this.language = options.language;
             this.searchByZip = options.searchByZip;
-            this.zipLength = parseInt(options.zipLength) || 5;
+            this.zipLength = options.zipLength || 5;
             this.userLocationButton = MapSVG.parseBoolean(options.userLocationButton);
             this.options = options.options || [
                 { value: "10", default: true },
@@ -6436,24 +6179,24 @@
                 { value: "50", default: false },
                 { value: "100", default: false },
             ];
-            let defOption;
+            let selected = false;
             if (this.value) {
                 this.options.forEach((option) => {
                     if (option.value === this.value.length) {
-                        defOption = option;
+                        option.selected = true;
+                        selected = true;
                     }
                 });
             }
-            if (!defOption) {
-                defOption = this.options.find(function (option) {
-                    return option.default === true;
+            if (!selected) {
+                this.options.forEach(function (option) {
+                    if (option.default) {
+                        option.selected = true;
+                    }
                 });
             }
-            if (!defOption) {
-                defOption = this.options[0];
-            }
             const defLengthOption = this.options.find((opt) => opt.selected === true);
-            this.defaultLength = defOption.value;
+            this.defaultLength = defLengthOption.value;
             this.setDefaultValue();
         }
         setDefaultValue() {
@@ -6470,7 +6213,7 @@
             this.inputs.units = ($$f(this.domElements.main).find('[name="distanceUnits"]')[0]);
             this.inputs.geoPoint = ($$f(this.domElements.main).find('[name="distanceGeoPoint"]')[0]);
             this.inputs.length = ($$f(this.domElements.main).find('[name="distanceLength"]')[0]);
-            this.inputs.address = ($$f(this.domElements.main).find('[name="distance"]')[0]);
+            this.inputs.address = ($$f(this.domElements.main).find('[name="distanceAddress"]')[0]);
         }
         getSchema() {
             const schema = super.getSchema();
@@ -6485,7 +6228,7 @@
             schema.language = this.language;
             schema.country = this.country;
             schema.searchByZip = this.searchByZip;
-            schema.zipLength = parseInt(this.zipLength + "");
+            schema.zipLength = this.zipLength;
             schema.userLocationButton = MapSVG.parseBoolean(this.userLocationButton);
             if (schema.distanceControl === "none") {
                 schema.distanceDefault = schema.options.filter(function (o) {
@@ -6558,37 +6301,33 @@
                 },
             });
             const thContainer = $$f(this.domElements.main).find(".typeahead");
-            this.spinner = $$f("<span class='spinner-border spinner-border-sm'></span>")[0];
             if (this.searchByZip) {
                 $$f(this.domElements.main).find(".mapsvg-distance-fields").addClass("search-by-zip");
                 thContainer.on("change keyup", (e) => {
-                    const zip = $$f(e.target).val().toString();
-                    if (zip.length === _this.zipLength) {
-                        $$f(this.spinner).appendTo($$f(e.target).closest(".distance-search-wrap"));
-                        locations.search($$f(e.target).val(), (data) => this.handleAddressFieldChange(zip, data), (data) => this.handleAddressFieldChange(zip, data, true));
+                    if ($$f(e.target).val().toString().length === _this.zipLength) {
+                        locations.search($$f(e.target).val(), null, (data) => {
+                            if (data && data[0]) {
+                                this.setValue({ geoPoint: data[0].geometry.location });
+                                this.triggerChanged();
+                            }
+                        });
                     }
                 });
             }
             else {
+                const spinner = $$f("<span class='spinner-border spinner-border-sm'></span>");
                 const tH = thContainer
                     .typeahead({ minLength: 3 }, {
                     name: "mapsvg-addresses",
                     display: "formatted_address",
+                    source: locations,
                     limit: 5,
-                    async: true,
-                    source: (query, sync, async) => {
-                        const request = { address: query };
-                        if (this.country) {
-                            request.componentRestrictions = { country: this.country };
-                        }
-                        MapSVG.geocode(request, async);
-                    },
                 })
-                    .on("typeahead:asyncrequest", (e) => {
-                    $$f(this.spinner).appendTo($$f(e.target).closest(".twitter-typeahead"));
+                    .on("typeahead:asyncrequest", function (e) {
+                    spinner.appendTo($$f(e.target).closest(".twitter-typeahead"));
                 })
-                    .on("typeahead:asynccancel typeahead:asyncreceive", (e) => {
-                    $$f(this.spinner).remove();
+                    .on("typeahead:asynccancel typeahead:asyncreceive", function (e) {
+                    spinner.remove();
                 });
                 $$f(this.domElements.main).find(".mapsvg-distance-fields").removeClass("search-by-zip");
             }
@@ -6596,7 +6335,14 @@
                 const userLocationButton = $$f(this.domElements.main).find(".user-location-button");
                 userLocationButton.on("click", () => {
                     _this.formBuilder.mapsvg.showUserLocation((location) => {
-                        locations.search(location.geoPoint.lat + "," + location.geoPoint.lng, (data) => this.setAddressByUserLocation(data, location), (data) => this.setAddressByUserLocation(data, location));
+                        locations.search(location.geoPoint.lat + "," + location.geoPoint.lng, null, function (data) {
+                            if (data && data[0]) {
+                                _this.setAddress(data[0].formatted_address);
+                            }
+                            else {
+                                _this.setAddress(location.geoPoint.lat + "," + location.geoPoint.lng);
+                            }
+                        });
                         this.setValue({ geoPoint: location.geoPoint });
                         this.triggerChanged();
                     });
@@ -6610,10 +6356,7 @@
                 }
             });
             thContainer.on("typeahead:select", (ev, item) => {
-                this.setValue({
-                    address: item.formatted_address,
-                    geoPoint: item.geometry.location.toJSON(),
-                });
+                this.setValue({ address: item.formatted_address, geoPoint: item.geometry.location });
                 this.triggerChanged();
                 thContainer.blur();
             });
@@ -6626,23 +6369,6 @@
                 this.setLength(parseInt(e.target.value), false);
                 this.triggerChanged();
             });
-        }
-        setAddressByUserLocation(data, location) {
-            if (data && data[0]) {
-                this.setAddress(data[0].formatted_address);
-            }
-            else {
-                this.setAddress(location.geoPoint.lat + "," + location.geoPoint.lng);
-            }
-        }
-        handleAddressFieldChange(zip, data, removeSpinner = false) {
-            if (removeSpinner) {
-                $$f(this.spinner).remove();
-            }
-            if (data && data[0]) {
-                this.setValue({ address: zip, geoPoint: data[0].geometry.location }, false);
-                this.triggerChanged();
-            }
         }
         addSelect2() {
             if ($$f().mselect2) {
@@ -8166,8 +7892,6 @@
             const _this = this;
             const imageDOM = $$h(this.domElements.main).find(".mapsvg-data-images");
             this.external.mediaUploader.on("select", () => {
-                if (_this.formBuilder.mediaUploaderisOpenedFor !== _this)
-                    return false;
                 const attachments = _this.external.mediaUploader.state().get("selection").toJSON();
                 attachments.forEach(function (img) {
                     const image = { sizes: {} };
@@ -8203,7 +7927,6 @@
             });
             $$h(_this.domElements.main).on("click", ".mapsvg-upload-image", function (e) {
                 e.preventDefault();
-                _this.formBuilder.mediaUploaderisOpenedFor = _this;
                 _this.external.mediaUploader.open();
             });
             $$h(_this.domElements.main).on("click", ".mapsvg-image-delete", function (e) {
@@ -8239,14 +7962,10 @@
                         .data("image", image);
                     const imgContainer = $$h('<div class="mapsvg-thumbnail-wrap"></div>').data("image", image);
                     imgContainer.append(img);
-                    imgContainer.append('<i class="mfa mfa-times  mapsvg-image-delete"></i>');
+                    imgContainer.append('<i class="fa fa-times  mapsvg-image-delete"></i>');
                     imageDOM.append(imgContainer);
                 });
             $$h(this.domElements.main).find("input").val(this.value);
-        }
-        destroy() {
-            super.destroy();
-            this.external.mediaUploader.off("select");
         }
     }
 
@@ -8391,9 +8110,6 @@
             this.markersByField = options.markersByField;
             this.markerField = options.markerField;
             this.markersByFieldEnabled = MapSVG.parseBoolean(options.markersByFieldEnabled);
-            this.defaultMarkerPath =
-                options.defaultMarkerPath ||
-                    this.formBuilder.mapsvg.getData().options.defaultMarkerImage;
             this.templates.marker = Handlebars.compile($$i("#mapsvg-data-tmpl-marker").html());
         }
         init() {
@@ -8406,7 +8122,6 @@
         getSchema() {
             const schema = super.getSchema();
             schema.language = this.language;
-            schema.defaultMarkerPath = this.defaultMarkerPath;
             schema.markersByField = this.markersByField;
             schema.markerField = this.markerField;
             schema.markersByFieldEnabled = MapSVG.parseBoolean(this.markersByFieldEnabled);
@@ -8425,7 +8140,7 @@
                 data.markersByFieldEnabled = MapSVG.parseBoolean(this.markersByFieldEnabled);
                 const _this = this;
                 data.markerImages.forEach(function (m) {
-                    if (m.relativeUrl === _this.defaultMarkerPath) {
+                    if (m.path === _this.formBuilder.mapsvg.getData().options.defaultMarkerImage) {
                         m.default = true;
                     }
                     else {
@@ -8476,29 +8191,12 @@
                 });
                 const thContainer = $$i(this.domElements.main).find(".typeahead");
                 const tH = thContainer
-                    .typeahead({ minLength: 3 }, {
+                    .typeahead({
+                    minLength: 3,
+                }, {
                     name: "mapsvg-addresses",
                     display: "formatted_address",
-                    async: true,
-                    source: (query, sync, async) => {
-                        const preg = new RegExp(/^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$/);
-                        if (preg.test(query)) {
-                            const latlng = query.split(",").map((item) => item.trim());
-                            const item = {
-                                formatted_address: latlng.join(","),
-                                address_components: [],
-                                geometry: {
-                                    location: {
-                                        lat: () => latlng[0],
-                                        lng: () => latlng[1],
-                                    },
-                                },
-                            };
-                            sync([item]);
-                            return;
-                        }
-                        MapSVG.geocode({ address: query }, async);
-                    },
+                    source: locations,
                 })
                     .on("typeahead:asyncrequest", function (e) {
                     $$i(e.target).addClass("tt-loading");
@@ -8519,18 +8217,18 @@
                     });
                     const locationData = {
                         address: address,
-                        geoPoint: new GeoPoint(item.geometry.location.lat(), item.geometry.location.lng()),
-                        img: this.getMarkerImage(this.formBuilder.getData()),
-                        imagePath: this.getMarkerImage(this.formBuilder.getData()),
+                        geoPoint: new GeoPoint(item.geometry.location.lat, item.geometry.location.lng),
+                        img: this.formBuilder.mapsvg.getMarkerImage(this.formBuilder.getData()),
+                        imagePath: this.formBuilder.mapsvg.getMarkerImage(this.formBuilder.getData()),
                     };
                     this.setValue(locationData, false);
                     thContainer.typeahead("val", "");
                     this.triggerChanged();
                 });
+                $$i(this.domElements.main).on("change", ".marker-file-uploader", function () {
+                    _this.markerIconUpload(this);
+                });
             }
-            $$i(this.domElements.main).on("change", ".marker-file-uploader", function () {
-                _this.markerIconUpload(this);
-            });
             $$i(this.domElements.main).on("click", ".mapsvg-marker-image-btn-trigger", function (e) {
                 e.preventDefault();
                 $$i(this).toggleClass("active");
@@ -8550,16 +8248,14 @@
             });
             $$i(this.domElements.edit).on("change", 'select[name="markerField"]', function () {
                 const fieldName = $$i(this).val();
-                _this.resetMarkersByField();
-                const newOptions = _this.fillMarkersByFieldOptions(fieldName);
-                _this.setMarkersByField(newOptions);
+                _this.fillMarkersByFieldOptions(fieldName);
             });
             $$i(this.domElements.edit).on("click", ".mapsvg-marker-image-selector button", function (e) {
                 e.preventDefault();
                 const src = $$i(this).find("img").attr("src");
                 $$i(this).parent().find("button").removeClass("active");
                 $$i(this).addClass("active");
-                _this.setDefaultMarkerPath(src);
+                _this.formBuilder.mapsvg.setDefaultMarkerImage(src);
             });
             $$i(this.domElements.edit).on("click", ".mapsvg-marker-image-btn-trigger", function (e) {
                 $$i(this).toggleClass("active");
@@ -8587,7 +8283,7 @@
                         const marker = resp.marker;
                         const newMarker = `
                             <button class="btn btn-outline-secondary mapsvg-marker-image-btn mapsvg-marker-image-btn-choose active">
-                                <img src="${marker.relativeUrl}" />
+                                <img src="${marker.path}" />
                             </button>
                             </button>
                         `;
@@ -8595,7 +8291,7 @@
                             .find(".mapsvg-marker-image-btn.active")
                             .removeClass("active");
                         $$i(newMarker).appendTo(this.domElements.markerSelector);
-                        this.setMarkerImage(marker.relativeUrl);
+                        this.setMarkerImage(marker.path);
                         MapSVG.markerImages.push(marker);
                     }
                 })
@@ -8627,28 +8323,23 @@
         fillMarkersByFieldOptions(fieldName) {
             const _this = this;
             const field = _this.formBuilder.mapsvg.objectsRepository.getSchema().getField(fieldName);
-            const options = {};
             if (field) {
                 const markerImg = _this.formBuilder.mapsvg.options.defaultMarkerImage;
                 const rows = [];
                 field.options.forEach(function (option) {
-                    const value = field.type === "region" ? option.id : option.value;
-                    const label = field.type === "region" ? option.title || option.id : option.label;
-                    const img = _this.markersByField && _this.markersByField[value]
-                        ? _this.markersByField[value]
+                    const img = _this.markersByField && _this.markersByField[option.value]
+                        ? _this.markersByField[option.value]
                         : markerImg;
                     rows.push('<tr data-option-id="' +
-                        value +
+                        option.value +
                         '"><td>' +
-                        label +
+                        option.label +
                         '</td><td><button class="btn dropdown-toggle btn-outline-secondary mapsvg-marker-image-btn-trigger mapsvg-marker-image-btn"><img src="' +
                         img +
                         '" class="new-marker-img" /><span class="caret"></span></button></td></tr>');
-                    options[value] = img;
                 });
                 $$i("#markers-by-field").empty().append(rows);
             }
-            return options;
         }
         renderMarker(marker) {
             if (marker && marker.location) {
@@ -8676,9 +8367,9 @@
             if (this.domElements.markerSelectorWrap &&
                 $$i(this.domElements.markerSelectorWrap).not(":visible")) {
                 $$i(this.domElements.markerSelector).find(".active").removeClass("active");
-                if (this.value && this.value.markerImagePath) {
+                if (this.value && this.value.imagePath) {
                     $$i(this.domElements.markerSelector)
-                        .find('[src="' + this.value.markerImagePath + '"]')
+                        .find('[src="' + this.value.imagePath + '"]')
                         .parent()
                         .addClass("active");
                 }
@@ -8691,12 +8382,12 @@
             const view = this.formBuilder.editMode ? this.domElements.edit : this.domElements.main;
             if (!view)
                 return;
-            const currentImage = this.value ? this.value.markerImagePath : null;
+            const currentImage = this.value ? this.value.imagePath : null;
             const images = MapSVG.markerImages.map(function (image) {
                 return ('<button class="btn btn-outline-secondary mapsvg-marker-image-btn mapsvg-marker-image-btn-choose ' +
-                    (currentImage == image.relativeUrl ? "active" : "") +
+                    (currentImage == image.path ? "active" : "") +
                     '"><img src="' +
-                    image.relativeUrl +
+                    image.path +
                     '" /></button>');
             });
             this.domElements.markerSelectorWrap = $$i(view).find(".mapsvg-marker-image-selector")[0];
@@ -8722,7 +8413,7 @@
             $$i(this.domElements.markerSelector).html(images.join(""));
         }
         setMarkerImage(src) {
-            this.setDefaultMarkerPath(src);
+            this.formBuilder.mapsvg.setDefaultMarkerImage(src);
             const value = this.value;
             if (value) {
                 value.img = src;
@@ -8747,9 +8438,9 @@
             const currentImage = markerBtn.attr("src");
             const images = MapSVG.markerImages.map(function (image) {
                 return ('<button class="btn btn-outline-secondary mapsvg-marker-image-btn mapsvg-marker-image-btn-choose ' +
-                    (currentImage == image.relativeUrl ? "active" : "") +
+                    (currentImage == image.path ? "active" : "") +
                     '"><img src="' +
-                    image.relativeUrl +
+                    image.path +
                     '" /></button>');
             });
             if (!jQueryObj.data("markerSelector")) {
@@ -8775,12 +8466,6 @@
                 _this.setMarkerByField(fieldId, src);
             });
         }
-        setMarkersByField(options) {
-            this.markersByField = options;
-        }
-        resetMarkersByField() {
-            this.markersByField = {};
-        }
         setMarkerByField(fieldId, markerImg) {
             this.markersByField = this.markersByField || {};
             this.markersByField[fieldId] = markerImg;
@@ -8798,46 +8483,8 @@
             }
             this.domElements.markerSelector && $$i(this.domElements.markerSelector).popover("dispose");
         }
-        setDefaultMarkerPath(path) {
-            this.defaultMarkerPath = path;
-            this.formBuilder.mapsvg.setDefaultMarkerImage(path);
-        }
-        getMarkerImage(data) {
-            let fieldValue;
-            if (this.markersByFieldEnabled) {
-                fieldValue = data[this.markerField];
-                if (!fieldValue) {
-                    return this.defaultMarkerPath || MapSVG.defaultMarkerImage;
-                }
-                else {
-                    if (this.markerField === "regions") {
-                        fieldValue = fieldValue[0] && fieldValue[0].id;
-                    }
-                    else if (typeof fieldValue === "object" && fieldValue.length) {
-                        fieldValue = fieldValue[0].value;
-                    }
-                    if (this.markersByField[fieldValue]) {
-                        return (this.markersByField[fieldValue] ||
-                            this.defaultMarkerPath ||
-                            MapSVG.defaultMarkerImage);
-                    }
-                }
-            }
-            else {
-                return this.defaultMarkerPath || MapSVG.defaultMarkerImage;
-            }
-        }
         setValue(value, updateInput = true) {
             this.value = value;
-            if (this.value) {
-                if (!this.value.address) {
-                    this.value.address = {};
-                }
-                if (Object.keys(this.value.address).length < 2 && this.value.geoPoint) {
-                    this.value.address.formatted =
-                        this.value.geoPoint.lat + "," + this.value.geoPoint.lng;
-                }
-            }
             this.renderMarker();
         }
     }
@@ -8988,12 +8635,7 @@
             });
         }
         setInputValue(value) {
-            if (value === null) {
-                this.$radios.prop("checked", false);
-            }
-            else {
-                this.inputs.radios.value = value;
-            }
+            this.inputs.radios.value = value;
         }
     }
 
@@ -9100,9 +8742,7 @@
     class SearchFormElement extends FormElement {
         constructor(options, formBuilder, external) {
             super(options, formBuilder, external);
-            this.searchFallback = MapSVG.parseBoolean(options.searchFallback) || false;
-            this.width = options.width || "100%";
-            this.name = "search";
+            this.searchType = options.searchType || "fulltext";
         }
         setDomElements() {
             super.setDomElements();
@@ -9115,13 +8755,11 @@
                 this.triggerChanged();
             });
         }
-        setInputValue(value) {
-            this.inputs.text.value = value;
-        }
         getSchema() {
             const schema = super.getSchema();
             schema.searchFallback = MapSVG.parseBoolean(this.searchFallback);
             schema.placeholder = this.placeholder;
+            schema.noResultsText = this.noResultsText;
             schema.width = this.width;
             return schema;
         }
@@ -9218,17 +8856,7 @@
             }
         }
         setInputValue(value) {
-            if (this.multiselect) {
-                if (this.value) {
-                    $$p(this.inputs.select).val(this.value.map((el) => el.value));
-                }
-                else {
-                    $$p(this.inputs.select).val([]);
-                }
-            }
-            else {
-                this.inputs.select.value = this.value;
-            }
+            this.inputs.select.value = value;
             $$p(this.inputs.select).trigger("change.select2");
         }
     }
@@ -9426,7 +9054,6 @@
         constructor(options, formBuilder, external) {
             super(options, formBuilder, external);
             this.searchFallback = MapSVG.parseBoolean(options.searchFallback);
-            this.searchType = options.searchType;
             this.width =
                 this.formBuilder.filtersHide && !this.formBuilder.modal
                     ? null
@@ -9563,11 +9190,9 @@
         }
         getExtraParams() {
             const databaseFields = [];
-            const databaseFieldsFilterable = [];
-            const databaseFieldsFilterableShort = [];
+            let databaseFieldsFilterableShort = [];
             const regionFields = [];
-            const regionFieldsFilterable = [];
-            const regions = new ArrayIndexed("id");
+            const regions = [];
             let mapIsGeo = false;
             if (this.mapsvg) {
                 mapIsGeo = this.mapsvg.isGeo();
@@ -9588,15 +9213,19 @@
                                 databaseFields.push("Object." + obj.name);
                             }
                         }
-                        if (obj.type == "region" || obj.type == "select" || obj.type == "radio") {
-                            databaseFieldsFilterable.push("Object." + obj.name);
-                            databaseFieldsFilterableShort.push(obj.name);
-                        }
+                    });
+                    databaseFieldsFilterableShort = schemaObjects
+                        .getFieldsAsArray()
+                        .filter(function (obj) {
+                        return obj.type == "select" || obj.type == "radio" || obj.type == "region";
+                    })
+                        .map(function (obj) {
+                        return obj.name;
                     });
                 }
                 const schemaRegions = this.mapsvg.regionsRepository.getSchema();
                 if (schemaRegions) {
-                    schemaRegions.getFieldsAsArray().forEach(function (obj) {
+                    const regionFields = schemaRegions.getFieldsAsArray().map(function (obj) {
                         if (obj.type == "status" ||
                             obj.type == "text" ||
                             obj.type == "textarea" ||
@@ -9605,27 +9234,23 @@
                             obj.type == "radio" ||
                             obj.type == "checkbox") {
                             if (obj.type == "post") {
-                                regionFields.push("Region.post.post_title");
+                                return "Region.post.post_title";
                             }
                             else {
-                                regionFields.push("Region." + obj.name);
+                                return "Region." + obj.name;
                             }
-                        }
-                        if (obj.type == "status" || obj.type == "select" || obj.type == "radio") {
-                            regionFieldsFilterable.push("Region." + obj.name);
                         }
                     });
                 }
+                const regions = new ArrayIndexed("id");
                 this.mapsvg.regions.forEach((region) => {
                     regions.push({ id: region.id, title: region.title });
                 });
             }
             return {
                 databaseFields: databaseFields,
-                databaseFieldsFilterable: databaseFieldsFilterable,
                 databaseFieldsFilterableShort: databaseFieldsFilterableShort,
                 regionFields: regionFields,
-                regionFieldsFilterable: regionFieldsFilterable,
                 regions: regions,
                 mapIsGeo: mapIsGeo,
                 mediaUploader: this.mediaUploader,
@@ -9766,12 +9391,8 @@
         viewDidLoad() { }
         setEventHandlers() {
             const _this = this;
-            $$w(this.getForm()).on("submit", (e) => {
-                e.preventDefault();
-            });
             if (this.filtersMode && this.clearButton) {
-                $$w(this.elements.buttons.clearButton).on("click", (e) => {
-                    e.preventDefault();
+                $$w(this.elements.buttons.clearButton).on("click", () => {
                     this.clearAllFields();
                 });
             }
@@ -9905,10 +9526,18 @@
             });
         }
         clearAllFields() {
-            this.formElements.forEach((f) => f.setValue(null));
+            $$w(this.getForm())
+                .find("input")
+                .not(":button, :submit, :reset, :hidden, :checkbox, :radio")
+                .val("")
+                .prop("selected", false);
+            $$w(this.getForm()).find('input[type="radio"]').prop("checked", false);
+            $$w(this.getForm()).find('input[type="checkbox"]').prop("checked", false);
+            $$w(this.getForm()).find("select").val("").trigger("change.select2");
             this.events.trigger("cleared");
         }
         setFormElementEventHandlers(formElement) {
+            const _this = this;
             if (this.editMode) {
                 formElement.events.on("click", (elem) => {
                     this.edit(elem);
@@ -9920,7 +9549,7 @@
             else {
                 formElement.events.on("changed", (_formElement) => {
                     const name = _formElement.name;
-                    const value = _formElement.getValue();
+                    const value = _formElement.value;
                     if (_formElement.type !== "search") {
                         this.events.trigger("changed.field", _formElement, [_formElement, name, value]);
                     }
@@ -9928,6 +9557,28 @@
                         this.events.trigger("changed.search", _formElement, [_formElement, value]);
                     }
                 });
+                const locationField = _this.mapsvg &&
+                    _this.mapsvg.objectsRepository &&
+                    _this.mapsvg.objectsRepository.getSchema() &&
+                    _this.mapsvg.objectsRepository.getSchema().getField("location");
+                if (locationField &&
+                    locationField.markersByFieldEnabled &&
+                    locationField.markerField &&
+                    formElement.name == locationField.markerField &&
+                    Object.values(locationField.markersByField).length > 0) {
+                    formElement.events.on("changed", (_formElement) => {
+                        const name = _formElement.name;
+                        const value = _formElement.value;
+                        const src = locationField.markersByField[value];
+                        if (src) {
+                            if (_this.markerBackup) {
+                                const marker = _this.mapsvg.getMarker(_this.markerBackup.id);
+                                marker.setImage(src);
+                                $$w(_this.view).find(".mapsvg-marker-image-btn img").attr("src", src);
+                            }
+                        }
+                    });
+                }
             }
         }
         save() {
@@ -9965,9 +9616,7 @@
                 const formElement = this.formElements.get(field.name);
                 if (formElement) {
                     if (typeof data[field.name] !== "undefined") {
-                        if (formElement.getValue() !== data[field.name]) {
-                            formElement.setValue(data[field.name]);
-                        }
+                        formElement.setValue(data[field.name]);
                     }
                     else {
                         formElement.setValue(null);
@@ -10066,8 +9715,7 @@
                 $$w(_this.container).append(this.view);
             }
             if (_this.filtersMode && _this.clearButton) {
-                _this.elements.buttons.clearButton = $$w('<div class="form-group mapsvg-filters-reset-container">' +
-                    '<button type="button" class="btn btn-outline-secondary mapsvg-filters-reset">' +
+                _this.elements.buttons.clearButton = $$w('<div class="form-group mapsvg-filters-reset-container"><button class="btn btn-outline-secondary mapsvg-filters-reset">' +
                     _this.clearButtonText +
                     "</button></div>")[0];
                 $$w(this.getForm()).append(_this.elements.buttons.clearButton);
@@ -10206,7 +9854,6 @@
         }
         close() {
             this.formElements.forEach((formElement) => formElement.destroy());
-            this.mediaUploader && this.mediaUploader.off("select");
             MapSVG.formBuilder = null;
             this.events.trigger("close", this, [this]);
         }
@@ -10331,16 +9978,7 @@
                 events: {
                     "changed.field": (formElement, field, value) => {
                         const filters = {};
-                        let _value = value;
-                        if (field === "regions") {
-                            _value = {};
-                            _value.region_ids = value instanceof Array ? value : [value];
-                            _value.table_name = this.mapsvg.options.database.regionsTableName;
-                            if (_value.region_ids.length === 0 || _value.region_ids[0] === "") {
-                                _value = null;
-                            }
-                        }
-                        filters[field] = _value;
+                        filters[field] = value;
                         this.query.setFilters(filters);
                         _this.events.trigger("changed.field", _this, [field, value]);
                         _this.events.trigger("changed.fields", _this, [field, value]);
@@ -10351,7 +9989,7 @@
                     },
                     cleared: (formBuilder) => {
                         this.query.clearFilters();
-                        this.events.trigger("cleared", _this, []);
+                        this.events.trigger("cleared.filters", _this, []);
                     },
                     loaded: (formBuilder) => {
                         $$x(formBuilder.container).find(".mapsvg-form-builder").css({
@@ -10367,9 +10005,7 @@
             this.formBuilder && this.formBuilder.reset();
         }
         update(query) {
-            const _query = Object.assign({}, query.filters);
-            _query.search = query.search;
-            this.formBuilder && this.formBuilder.update(_query);
+            this.formBuilder && this.formBuilder.update(query.filters);
         }
         setFiltersCounter() {
             if (this.hideFilters) {
@@ -10398,7 +10034,7 @@
     class PopoverController extends Controller {
         constructor(options) {
             super(options);
-            this.autoresize = true;
+            options.autoresize = true;
             this.point = options.point;
             this.yShift = options.yShift;
             this.mapObject = options.mapObject;
@@ -10656,7 +10292,7 @@
 
     const $$A = jQuery;
     class MapSVGMap {
-        constructor(containerId, mapParams, externalParams) {
+        constructor(containerId, mapParams) {
             this.markerOptions = { src: MapSVG.urls.root + "markers/pin1_red.png" };
             const options = mapParams.options;
             this.updateOutdatedOptions(options);
@@ -10679,12 +10315,10 @@
             this.containers = {
                 map: document.getElementById(this.containerId),
                 scrollpane: $$A('<div class="mapsvg-scrollpane"></div>')[0],
-                scrollpaneWrap: $$A('<div class="mapsvg-scrollpane-wrap"></div>')[0],
                 layers: $$A('<div class="mapsvg-layers-wrap"></div>')[0],
             };
             this.containers.map.appendChild(this.containers.layers);
-            this.containers.map.appendChild(this.containers.scrollpaneWrap);
-            this.containers.scrollpaneWrap.appendChild(this.containers.scrollpane);
+            this.containers.map.appendChild(this.containers.scrollpane);
             this.whRatio = 0;
             this.isScrolling = false;
             this.markerOptions = {};
@@ -10702,14 +10336,7 @@
             this.regionsRepository = new Repository("region", "regions/" + this.options.database.regionsTableName);
             this.regionsRepository.query.update({ perpage: 0 });
             this.objectsRepository = new Repository("object", "objects/" + this.options.database.objectsTableName);
-            if (this.options.database.noFiltersNoLoad) {
-                this.objectsRepository.setNoFiltersNoLoad(true);
-            }
-            this.objectsRepository.query.update({
-                perpage: this.options.database.pagination.on
-                    ? this.options.database.pagination.perpage
-                    : 0,
-            });
+            this.objectsRepository.query.update({ perpage: this.options.database.pagination.perpage });
             this.schemaRepository = new SchemaRepository();
             this.markers = new ArrayIndexed("id");
             this.markersClusters = new ArrayIndexed("id");
@@ -10742,17 +10369,6 @@
                 zoomLimit: true,
                 maxZoomService: null,
             };
-            this.afterLoadBlockers = 1;
-            this.loaded = false;
-            if (this.id) {
-                this.afterLoadBlockers += 2;
-            }
-            if (this.options.googleMaps.on) {
-                this.afterLoadBlockers++;
-            }
-            if (this.filtersShouldBeShown()) {
-                this.afterLoadBlockers++;
-            }
             this.init();
         }
         urlToRelativePath(url) {
@@ -10794,7 +10410,7 @@
                 const id = $$A(this)[0].getAttribute("id");
                 if (id) {
                     const title = $$A(this)[0].getAttribute("title");
-                    options.push({ label: title || id, value: id });
+                    options.push({ label: title, value: id });
                 }
             });
             optionGroups.push({ title: "SVG Layers / Groups", options: options });
@@ -10804,7 +10420,7 @@
                 const id = $$A(this)[0].getAttribute("id");
                 if (id) {
                     const title = $$A(this)[0].getAttribute("title");
-                    options2.push({ label: title || id, value: id });
+                    options2.push({ label: title, value: id });
                 }
             });
             optionGroups.push({ title: "Other SVG objects", options: options2 });
@@ -10893,7 +10509,7 @@
         loadDirectory() {
             if (!this.editMode &&
                 this.options.menu.source === "database" &&
-                !this.objectsRepository.loaded) {
+                this.objectsRepository.getLoaded().length === 0) {
                 return;
             }
             if (this.options.menu.on) {
@@ -11280,7 +10896,7 @@
                 region.objects = [];
             });
             this.objectsRepository.getLoaded().forEach((obj, index) => {
-                const regions = obj.getRegionsForTable(this.options.database.regionsTableName);
+                const regions = obj.getRegionsForTable(this.regionsRepository.schema.name);
                 if (regions && regions.length) {
                     regions.forEach((region) => {
                         const r = this.getRegion(region.id);
@@ -11299,7 +10915,7 @@
                     if (name == "directoryItem" || name == "directoryCategoryItem") {
                         const dirItemTemplate = this.options.templates.directoryItem;
                         t =
-                            '{{#each items}}<div id="mapsvg-directory-item-{{#if id_no_spaces}}{{id_no_spaces}}{{else}}{{id}}{{/if}}" class="mapsvg-directory-item" data-object-id="{{id}}">' +
+                            '{{#each items}}<div id="mapsvg-directory-item-{{id}}" class="mapsvg-directory-item" data-object-id="{{id}}">' +
                                 dirItemTemplate +
                                 "</div>{{/each}}";
                         if (this.options.menu.categories &&
@@ -11592,7 +11208,7 @@
             }
             if (typeof this.options.tooltips.maxWidth !== "undefined" ||
                 typeof this.options.tooltips.minWidth !== "undefined") {
-                this.controllers.tooltip.setSize(this.options.tooltips.minWidth, this.options.tooltips.maxWidth);
+                this.controllers.tooltip.setSize(this.options.tooltips.maxWidth, this.options.tooltips.minWidth);
             }
         }
         setPopovers(options) {
@@ -11675,18 +11291,26 @@
             this.scroll.ty = Math.round((this.svgDefault.viewBox.y - this.viewBox.y) * this.scale);
             if (this.googleMaps.map && adjustGoogleMap !== false) {
                 const googlePrevZoom = this.googleMaps.map.getZoom();
-                this.googleMaps.map.setCenter(this.getCenterGeoPoint());
                 this.googleMaps.map.setZoom(this.getZoomForGoogle());
+                if (googlePrevZoom !== this.googleMaps.map.getZoom()) {
+                    this.googleMaps.map.setCenter(this.getCenterGeoPoint());
+                }
             }
             else {
                 this.containers.scrollpane.style.transform =
                     "translate(" + this.scroll.tx + "px," + this.scroll.ty + "px)";
                 this.containers.svg.style.transform = "scale(" + this.superScale + ")";
+                let a = this.superScale / 3;
+                let id = this.containers.map.id;
+                $$A(`#${id} .map__region-label`).each(function (i) {
+                    console.log(this);
+                    this.style.transform = "scale(" + a + ")";
+                });
                 this.syncZoomLevelWithGoogle();
             }
             this.movingItemsAdjustScreenPosition();
             if (isZooming) {
-                this.adjustStrokes();
+                this.mapAdjustStrokes();
                 this.toggleSvgLayerOnZoom();
                 if (this.options.clustering.on) {
                     this.throttle(this.clusterizeOnZoom, 400, this);
@@ -11760,7 +11384,7 @@
             const xyNE = this.converter.convertGeoToSVG(ne);
             const xySW = this.converter.convertGeoToSVG(sw);
             if (xyNE.x < xySW.y) {
-                const mapPointsWidth = (this.svgDefault.viewBox.width / this.converter.mapLonDelta) * 360;
+                const mapPointsWidth = (this.svgDefault.viewBox.width / this.mapLonDelta) * 360;
                 xySW.x = -(mapPointsWidth - xySW.y);
             }
             const width = xyNE.x - xySW.x;
@@ -11769,7 +11393,6 @@
             this.setViewBox(viewBox);
         }
         redraw() {
-            this.disableAnimation();
             if (MapSVG.browser.ie) {
                 $$A(this.containers.svg).css({ height: this.svgDefault.viewBox.height });
             }
@@ -11790,8 +11413,7 @@
                 this.controllers.directory.updateScroll();
             }
             this.movingItemsAdjustScreenPosition();
-            this.adjustStrokes();
-            this.enableAnimation();
+            this.mapAdjustStrokes();
         }
         setSize(width, height, responsive) {
             this.options.width = width;
@@ -11869,11 +11491,11 @@
                 this.setZoomLevels();
             }
             $$A.extend(true, this.options, { zoom: options });
-            $$A(this.containers.scrollpaneWrap).off("wheel.mapsvg");
+            $$A(this.containers.map).off("wheel.mapsvg");
             if (this.options.zoom.mousewheel) {
                 if (MapSVG.browser.firefox) {
                     this.firefoxScroll = { insideIframe: false, scrollX: 0, scrollY: 0 };
-                    $$A(this.containers.scrollpaneWrap)
+                    $$A(this.containers.map)
                         .on("mouseenter", () => {
                         this.firefoxScroll.insideIframe = true;
                         this.firefoxScroll.scrollX = window.scrollX;
@@ -11887,20 +11509,20 @@
                             window.scrollTo(this.firefoxScroll.scrollX, this.firefoxScroll.scrollY);
                     });
                 }
-                $$A(this.containers.scrollpaneWrap).on("wheel.mapsvg", (event) => {
-                    event.preventDefault();
-                    this.mouseWheelZoom(event);
-                    return false;
-                });
-                $$A(this.layers.markers).on("wheel.mapsvg", (event) => {
-                    event.preventDefault();
-                    this.mouseWheelZoom(event);
-                    return false;
+                $$A(this.containers.map).on("wheel.mapsvg", (event) => {
+                    this.throttle(this.mouseWheelZoom, 500, this, [event]);
+                    return;
                 });
             }
             this.canZoom = true;
         }
         mouseWheelZoom(event) {
+            if ($$A(event.target).hasClass("mapsvg-popover") ||
+                $$A(event.target).closest(".mapsvg-popover").length ||
+                $$A(event.target).hasClass("mapsvg-details-container") ||
+                $$A(event.target).closest(".mapsvg-details-container").length) {
+                return;
+            }
             event.preventDefault();
             const d = Math.sign(-event.originalEvent.deltaY);
             const center = this.getSvgPointAtClick(event.originalEvent);
@@ -12412,17 +12034,6 @@
                 this.updateFilterTags();
             }
         }
-        setGlobalDistanceFilter() {
-            if (this.objectsRepository &&
-                this.objectsRepository.query.filters &&
-                this.objectsRepository.query.filters.distance) {
-                const dist = this.objectsRepository.query.filters.distance;
-                MapSVG.distanceSearch = this.objectsRepository.query.filters.distance;
-            }
-            else {
-                MapSVG.distanceSearch = null;
-            }
-        }
         updateFilterTags() {
             $$A(this.containers.filterTags) && $$A(this.containers.filterTags).empty();
             for (const field_name in this.objectsRepository.query.filters) {
@@ -12657,13 +12268,11 @@
                     });
                     this.controllers.directory._init();
                 }
-                if (options.source) {
+                else {
                     this.controllers.directory.repository =
                         this.options.menu.source === "regions"
                             ? this.regionsRepository
                             : this.objectsRepository;
-                }
-                if (options.sortBy || options.sortDirection) {
                     this.controllers.directory.repository.query.update({
                         sort: [
                             {
@@ -12672,13 +12281,11 @@
                             },
                         ],
                     });
-                }
-                if (options.filterout) {
-                    const f = {};
-                    f[this.options.menu.filterout.field] = this.options.menu.filterout.val;
-                    this.controllers.directory.repository.query.setFilterOut(f);
-                }
-                if (options.location) {
+                    if (options.filterout) {
+                        const f = {};
+                        f[this.options.menu.filterout.field] = this.options.menu.filterout.val;
+                        this.controllers.directory.repository.query.setFilterOut(f);
+                    }
                     this.controllers.directory.scrollable = this.shouldBeScrollable(this.options.menu.location);
                 }
                 let $container;
@@ -12755,6 +12362,9 @@
             if (this.options.googleMaps.on) {
                 $$A(this.containers.map).toggleClass("mapsvg-with-google-map", true);
                 if (!MapSVG.googleMapsApiLoaded) {
+                    this.events.on("googleMapsBoundsChanged", (bounds) => {
+                        this.setViewBoxByGoogleMapsOverlay();
+                    });
                     this.loadGoogleMapsAPI(() => {
                         this.setGoogleMaps();
                     }, () => {
@@ -12784,7 +12394,6 @@
                             streetViewControl: false,
                             zoomControl: false,
                             styles: options.styleJSON,
-                            tilt: 0,
                         });
                         const southWest = new google.maps.LatLng(this.geoViewBox.sw.lat, this.geoViewBox.sw.lng);
                         const northEast = new google.maps.LatLng(this.geoViewBox.ne.lat, this.geoViewBox.ne.lng);
@@ -12820,13 +12429,8 @@
                                     this.setInitialViewBox(this.viewBox);
                                     this.toggleSvgLayerOnZoom();
                                     this.events.trigger("googleMapsLoaded");
-                                    this.afterLoadBlockers--;
-                                    this.finalizeMapLoading();
                                 }, 300);
                             }, 1);
-                        });
-                        this.events.on("googleMapsBoundsChanged", (bounds) => {
-                            this.setViewBoxByGoogleMapsOverlay();
                         });
                     }
                     else {
@@ -12835,7 +12439,6 @@
                         if (options.type) {
                             this.googleMaps.map.setMapTypeId(options.type);
                         }
-                        this.setViewBoxByGoogleMapsOverlay();
                     }
                 }
             }
@@ -12965,9 +12568,7 @@
                 libraries = "&libraries=" + gmLibraries.join(",");
             }
             this.googleMapsScript.src =
-                "https://maps.googleapis.com/maps/api/js?language=" +
-                    this.options.googleMaps.language +
-                    "&key=" +
+                "https://maps.googleapis.com/maps/api/js?language=en&key=" +
                     this.options.googleMaps.apiKey +
                     libraries;
             document.head.appendChild(this.googleMapsScript);
@@ -13037,7 +12638,7 @@
             this.loadFiltersController(this.containers.filtersModal, true);
         }
         loadFiltersController(container, modal = false) {
-            if (!this.filtersShouldBeShown()) {
+            if (this.filtersSchema.getFields().length === 0) {
                 return;
             }
             let filtersInDirectory, filtersHide;
@@ -13065,7 +12666,18 @@
             }
             else {
                 this.changedSearch = () => {
-                    this.filtersRepository.query.searchFallback = this.filtersSchema.getFieldByType("search").searchFallback;
+                    this.throttle(this.filtersRepository.reload, 400, this.filtersRepository);
+                };
+                this.changedFields = () => {
+                    this.throttle(this.filtersRepository.reload, 400, this.filtersRepository);
+                };
+            }
+            if (this.options.filters.searchButton) {
+                this.changedFields = null;
+                this.changedSearch = null;
+            }
+            else {
+                this.changedSearch = () => {
                     this.throttle(this.filtersRepository.reload, 400, this.filtersRepository);
                 };
                 this.changedFields = () => {
@@ -13093,9 +12705,8 @@
                 searchButtonText: this.options.filters.searchButtonText,
                 padding: this.options.filters.padding,
                 events: {
-                    cleared: () => {
+                    "cleared.fields": () => {
                         this.deselectAllRegions();
-                        this.filtersRepository.reload();
                     },
                     "changed.fields": this.changedFields,
                     "changed.search": this.changedSearch,
@@ -13104,8 +12715,6 @@
                     },
                     loaded: () => {
                         this.controllers.directory && this.controllers.directory.updateTopShift();
-                        this.afterLoadBlockers--;
-                        this.finalizeMapLoading();
                     },
                     "click.btn.showFilters": () => {
                         this.loadFiltersModal();
@@ -13113,11 +12722,6 @@
                 },
             });
             this.controllers.filters._init();
-        }
-        filtersShouldBeShown() {
-            return (this.options.filters.on &&
-                this.options.filtersSchema &&
-                this.options.filtersSchema.length > 0);
         }
         textSearch(text, fallback = false) {
             const query = new Query({
@@ -13318,15 +12922,15 @@
         viewBoxGetBySize(width, height) {
             const new_ratio = width / height;
             const old_ratio = this.svgDefault.viewBox.width / this.svgDefault.viewBox.height;
-            const vb = this.svgDefault.viewBox.clone();
+            const vb = $$A.extend([], this.svgDefault.viewBox);
             if (new_ratio != old_ratio) {
                 if (new_ratio > old_ratio) {
-                    vb.width = this.svgDefault.viewBox.height * new_ratio;
-                    vb.x = this.svgDefault.viewBox.x - (vb.width - this.svgDefault.viewBox.width) / 2;
+                    vb[2] = this.svgDefault.viewBox.height * new_ratio;
+                    vb[0] = this.svgDefault.viewBox.x - (vb[2] - this.svgDefault.viewBox.width) / 2;
                 }
                 else {
-                    vb.height = this.svgDefault.viewBox.width / new_ratio;
-                    vb.y = this.svgDefault.viewBox.y - (vb.height - this.svgDefault.viewBox.height) / 2;
+                    vb[3] = this.svgDefault.viewBox.width / new_ratio;
+                    vb[1] = this.svgDefault.viewBox.y - (vb[3] - this.svgDefault.viewBox.height) / 2;
                 }
             }
             return vb;
@@ -13375,25 +12979,8 @@
             const bottomLat = this.converter.convertSVGToGeo(p4).lat;
             return [leftLon, topLat, rightLon, bottomLat];
         }
-        setStrokes() {
-            $$A(this.containers.svg)
-                .find("path, polygon, circle, ellipse, rect, line, polyline")
-                .each((index, elem) => {
-                const width = MapObject.getComputedStyle("stroke-width", elem);
-                if (width) {
-                    $$A(elem).attr("data-stroke-width", width.replace("px", ""));
-                }
-            });
-        }
-        adjustStrokes() {
-            $$A(this.containers.svg)
-                .find("path, polygon, circle, ellipse, rect, line, polyline")
-                .each((index, elem) => {
-                const width = elem.getAttribute("data-stroke-width");
-                if (width) {
-                    $$A(elem).css("stroke-width", Number(width) / this.scale);
-                }
-            });
+        mapAdjustStrokes() {
+            this.regions.forEach((region) => region.adjustStroke(this.scale));
         }
         zoomIn(center) {
             if (this.canZoom) {
@@ -13418,35 +13005,9 @@
             }
         }
         zoomTo(mapObjects, zoomToLevel) {
-            if (mapObjects instanceof Marker || mapObjects instanceof MarkerCluster) {
-                return this.zoomToMarkerOrCluster(mapObjects, zoomToLevel);
-            }
-            else {
-                const convertedObjects = !Array.isArray(mapObjects) ? [mapObjects] : mapObjects;
-                const bbox = this.getGroupBBox(convertedObjects);
-                return this.fitViewBox(bbox, zoomToLevel);
-            }
-        }
-        zoomToMarkerOrCluster(mapObject, zoomToLevel) {
-            this.zoomLevel = zoomToLevel || 1;
-            const foundZoomLevel = this.zoomLevels.get(this.zoomLevel);
-            if (!foundZoomLevel) {
-                return false;
-            }
-            const vb = foundZoomLevel.viewBox;
-            if (this.canZoom) {
-                this.isZooming = true;
-                this.canZoom = false;
-                setTimeout(() => {
-                    this.isZooming = false;
-                    this.canZoom = true;
-                }, 700);
-                const vbNew = new ViewBox(mapObject.svgPoint.x - vb.width / 2, mapObject.svgPoint.y - vb.height / 2, vb.width, vb.height);
-                this.setViewBox(vbNew);
-                this._scale = foundZoomLevel._scale;
-                return true;
-            }
-            return false;
+            const convertedObjects = !Array.isArray(mapObjects) ? [mapObjects] : mapObjects;
+            const bbox = this.getGroupBBox(convertedObjects);
+            return this.fitViewBox(bbox, zoomToLevel);
         }
         getGroupBBox(mapObjects) {
             let _bbox;
@@ -13511,6 +13072,13 @@
         zoomToRegion(region, zoomToLevel) {
             this.fitViewBox(region.getBBox(), zoomToLevel);
             return true;
+        }
+        zoomToMarkerOrCluster(mapObject, zoomToLevel) {
+            this.zoomLevel = zoomToLevel || 1;
+            const vb = this.zoomLevels.get(this.zoomLevel).viewBox;
+            const newViewBox = new ViewBox(mapObject.svgPoint.x - vb.width / 2, mapObject.svgPoint.y - vb.height / 2, vb.width, vb.height);
+            this.setViewBox(newViewBox);
+            this._scale = this.zoomLevels.get(this.zoomLevel)._scale;
         }
         centerOn(region, yShift) {
             if (this.options.googleMaps.on) {
@@ -13810,7 +13378,7 @@
         }
         scrollEnd(e, mapsvg, noClick) {
             setTimeout(() => {
-                this.enableAnimation();
+                this.enableTransitions();
                 this.scrollStarted = false;
                 this.isScrolling = false;
             }, 100);
@@ -14144,7 +13712,7 @@
                 previousMapsIds.pop();
             }
             let showPreviousMapButton;
-            if (this.options.actions.region.click.showAnotherMapContainerId !== "undefined") {
+            if (this.options.actions.region.click.region.showAnotherMapContainerId !== "undefined") {
                 showPreviousMapButton = false;
             }
             else {
@@ -14429,8 +13997,7 @@
         }
         setMarkerImagesDependency() {
             this.locationField = this.objectsRepository.schema.getFieldByType("location");
-            if (this.locationField &&
-                this.locationField.markersByFieldEnabled &&
+            if (this.locationField.markersByFieldEnabled &&
                 this.locationField.markerField &&
                 Object.values(this.locationField.markersByField).length > 0) {
                 this.setMarkersByField = true;
@@ -14444,12 +14011,6 @@
             if (this.setMarkersByField) {
                 if (typeof fieldValueOrObject === "object") {
                     fieldValue = fieldValueOrObject[this.locationField.markerField];
-                    if (this.locationField.markerField === "regions") {
-                        fieldValue = fieldValue[0] && fieldValue[0].id;
-                    }
-                    else if (typeof fieldValue === "object" && fieldValue.length) {
-                        fieldValue = fieldValue[0].value;
-                    }
                 }
                 else {
                     fieldValue = fieldValueOrObject;
@@ -14458,8 +14019,8 @@
                     return this.locationField.markersByField[fieldValue];
                 }
             }
-            return location && location.imagePath
-                ? location.imagePath
+            return location && location.img
+                ? location.img
                 : this.options.defaultMarkerImage
                     ? this.options.defaultMarkerImage
                     : MapSVG.urls.root + "markers/_pin_default.png";
@@ -14672,8 +14233,9 @@
             const _this = this;
             $$A(_this.containers.map).off(".common.mapsvg");
             $$A(_this.containers.scrollpane).off(".common.mapsvg");
-            $$A(document).off(".scroll.mapsvg");
-            $$A(document).off(".scrollInit.mapsvg");
+            $$A(document).off("keydown.scroll.mapsvg");
+            $$A(document).off("mousemove.scrollInit.mapsvg");
+            $$A(document).off("mouseup.scrollInit.mapsvg");
             if (_this.editMarkers.on) {
                 $$A(_this.containers.map).on("touchstart.common.mapsvg mousedown.common.mapsvg", ".mapsvg-marker", function (e) {
                     e.originalEvent.preventDefault();
@@ -14706,8 +14268,7 @@
             }
             if (_this.options.scroll.spacebar) {
                 $$A(document).on("keydown.scroll.mapsvg", function (e) {
-                    if (!(document.activeElement.tagName === "INPUT" &&
-                        $$A(document.activeElement).attr("type") === "text") &&
+                    if (document.activeElement.tagName !== "INPUT" &&
                         !_this.isScrolling &&
                         e.keyCode == 32) {
                         e.preventDefault();
@@ -14873,11 +14434,6 @@
                     }
                 });
             }
-            else {
-                this.markers.forEach((marker) => {
-                    marker.setLabel("");
-                });
-            }
         }
         addLayer(name) {
             this.layers[name] = $$A('<div class="mapsvg-layer mapsvg-layer-' + name + '"></div>')[0];
@@ -14923,9 +14479,6 @@
                 const elem = element;
                 if ($$A(elem).closest("defs").length)
                     return;
-                if (elem.getAttribute("data-stroke-width")) {
-                    elem.style["stroke-width"] = elem.getAttribute("data-stroke-width");
-                }
                 if (elem.getAttribute("id")) {
                     if (!this.options.regionPrefix ||
                         (this.options.regionPrefix &&
@@ -14948,17 +14501,8 @@
                 }
                 else {
                     if (this.options.filters.filteredRegionsStatus ||
-                        this.options.filters.filteredRegionsStatus === 0 ||
-                        (this.options.menu.source === "regions" &&
-                            this.options.menu.filterout &&
-                            this.options.menu.filterout.field === "status" &&
-                            this.options.menu.filterout.val) ||
-                        this.options.menu.filterout.val === 0) {
-                        const status = this.options.filters.filteredRegionsStatus ||
-                            this.options.filters.filteredRegionsStatus === 0
-                            ? this.options.filters.filteredRegionsStatus
-                            : this.options.menu.filterout.val;
-                        region.setStatus(status);
+                        this.options.filters.filteredRegionsStatus === 0) {
+                        region.setStatus(this.options.filters.filteredRegionsStatus);
                     }
                 }
             });
@@ -14973,30 +14517,21 @@
         fixMarkersWorldScreen() {
             if (this.googleMaps.map)
                 setTimeout(() => {
-                    const markers = { left: 0, right: 0, leftOut: 0, rightOut: 0 };
+                    const markers = { left: 0, right: 0 };
                     if (this.markers.length > 1) {
                         this.markers.forEach((m) => {
-                            if ($$A(m.element).offset().left <
+                            if (m.node.offset().left <
                                 $$A(this.containers.map).offset().left +
                                     this.containers.map.clientWidth / 2) {
                                 markers.left++;
-                                if ($$A(m.element).offset().left < $$A(this.containers.map).offset().left) {
-                                    markers.leftOut++;
-                                }
                             }
                             else {
                                 markers.right++;
-                                if ($$A(m.element).offset().left >
-                                    $$A(this.containers.map).offset().left +
-                                        this.containers.map.clientWidth) {
-                                    markers.rightOut++;
-                                }
                             }
                         });
-                        if ((markers.left === 0 && markers.rightOut) ||
-                            (markers.right === 0 && markers.leftOut)) {
+                        if (markers.left === 0 || markers.right === 0) {
                             const k = markers.left === 0 ? 1 : -1;
-                            const ww = (this.svgDefault.viewBox.width / this.converter.mapLonDelta) *
+                            const ww = (this.svgDefault.viewBox.width / this.mapLonDelta) *
                                 360 *
                                 this.getScale();
                             this.googleMaps.map.panBy(k * ww, 0);
@@ -15062,14 +14597,12 @@
             }
         }
         init() {
-            MapSVG.addInstance(this);
             if (this.options.source === "") {
                 throw new Error("MapSVG: please provide SVG file source.");
             }
-            this.disableAnimation();
+            this.disableCssAnimations();
             this.setEvents(this.options.events);
             this.events.trigger("beforeLoad");
-            this.loadGoogleMapsAPI(() => { }, () => { });
             this.containers.map.classList.add("mapsvg");
             this.setCss();
             if (this.options.colors && this.options.colors.background) {
@@ -15132,7 +14665,6 @@
             svgTag.removeAttr("width");
             svgTag.removeAttr("height");
             $$A(this.containers.scrollpane).append(svgTag);
-            this.setStrokes();
             this.reloadRegions();
             this.setSize(this.options.width, this.options.height, this.options.responsive);
             if (this.options.disableAll) {
@@ -15159,7 +14691,6 @@
                 this.showLoadingMessage();
             });
             this.objectsRepository.events.on("loaded", () => {
-                this.setGlobalDistanceFilter();
                 this.fitOnDataLoadDone = false;
                 this.addLocations();
                 this.fixMarkersWorldScreen();
@@ -15178,7 +14709,7 @@
                     this.controllers.filters.setFiltersCounter();
                 }
                 this.hideLoadingMessage();
-                this.events.trigger("databaseLoaded");
+                this.events.trigger("dataLoaded");
                 this.updateFiltersState();
                 this.setChoropleth();
             });
@@ -15231,45 +14762,31 @@
                 }
             }
             this.setEventHandlers();
-            this.afterLoadBlockers--;
             if (!this.id) {
                 this.finalizeMapLoading();
                 return;
             }
-            if (!this.options.data_regions) {
-                this.regionsRepository.find().done((data) => {
-                    this.afterLoadBlockers--;
-                    this.finalizeMapLoading();
+            if (!this.options.data_regions || !this.options.data_objects) {
+                this.regionsRepository.find({ withSchema: true }).done((regions) => {
+                    if (this.options.database.loadOnStart || this.editMode) {
+                        this.objectsRepository.find({ withSchema: true }).done((data) => {
+                            this.finalizeMapLoading();
+                        });
+                    }
+                    else {
+                        this.finalizeMapLoading();
+                    }
                 });
             }
             else {
                 this.regionsRepository.loadDataFromResponse(this.options.data_regions);
-                this.afterLoadBlockers--;
-            }
-            if (!this.options.data_objects) {
-                if (this.options.database.loadOnStart || this.editMode) {
-                    this.objectsRepository.find().done((data) => {
-                        this.afterLoadBlockers--;
-                        this.finalizeMapLoading();
-                    });
-                }
-                else {
-                    this.afterLoadBlockers--;
-                    this.finalizeMapLoading();
-                }
-            }
-            else {
                 if (this.editMode || this.options.database.loadOnStart) {
                     this.objectsRepository.loadDataFromResponse(this.options.data_objects);
-                    this.afterLoadBlockers--;
-                }
-                else {
-                    this.afterLoadBlockers--;
                 }
                 delete this.options.data_regions;
                 delete this.options.data_objects;
-                this.finalizeMapLoading();
             }
+            this.finalizeMapLoading();
         }
         getGeoViewBoxFromSvgTag(svgTag) {
             const geo = $$A(svgTag).attr("mapsvg:geoViewBox") || $$A(svgTag).attr("mapsvg:geoviewbox");
@@ -15348,10 +14865,10 @@
         showLoadingMessage() {
             $$A(this.containers.loading).show();
         }
-        disableAnimation() {
+        disableCssAnimations() {
             this.containers.map.classList.add("no-transitions");
         }
-        enableAnimation() {
+        enableTransitions() {
             $$A(this.containers.map).removeClass("no-transitions");
         }
         loadExtensions() {
@@ -15363,21 +14880,24 @@
             }
         }
         finalizeMapLoading() {
-            if (this.afterLoadBlockers > 0 || this.loaded) {
+            if (this.options.googleMaps.on && !this.googleMaps.map) {
+                this.events.on("googleMapsLoaded", () => {
+                    this.finalizeMapLoading();
+                });
                 return;
             }
             this.selectRegionByIdFromUrl();
             setTimeout(() => {
                 this.movingItemsAdjustScreenPosition();
-                this.adjustStrokes();
+                this.mapAdjustStrokes();
                 setTimeout(() => {
                     this.hideLoadingMessage();
                     $$A(this.containers.loading).find(".mapsvg-loading-text").hide();
-                    this.enableAnimation();
+                    this.enableTransitions();
                 }, 200);
             }, 100);
-            this.loaded = true;
             this.events.trigger("afterLoad");
+            MapSVG.addInstance(this);
         }
         selectRegionByIdFromUrl() {
             const match = RegExp("[?&]mapsvg_select=([^&]*)").exec(window.location.search);

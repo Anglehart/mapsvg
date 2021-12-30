@@ -67,7 +67,6 @@ export class FormBuilder {
         marker: Marker;
     };
     editingMarker?: Marker;
-    mediaUploaderisOpenedFor: FormElementInterface;
 
     constructor(options: { [key: string]: any }) {
         // schema, editMode, mapsvg, mediaUploader, data, admin, namespace
@@ -220,13 +219,8 @@ export class FormBuilder {
     setEventHandlers() {
         const _this = this;
 
-        $(this.getForm()).on("submit", (e) => {
-            e.preventDefault();
-        });
-
         if (this.filtersMode && this.clearButton) {
-            $(this.elements.buttons.clearButton).on("click", (e) => {
-                e.preventDefault();
+            $(this.elements.buttons.clearButton).on("click", () => {
                 this.clearAllFields();
             });
         }
@@ -402,15 +396,14 @@ export class FormBuilder {
     }
 
     private clearAllFields() {
-        this.formElements.forEach((f) => f.setValue(null));
-        // $(this.getForm())
-        //     .find("input")
-        //     .not(":button, :submit, :reset, :hidden, :checkbox, :radio")
-        //     .val("")
-        //     .prop("selected", false);
-        // $(this.getForm()).find('input[type="radio"]').prop("checked", false);
-        // $(this.getForm()).find('input[type="checkbox"]').prop("checked", false);
-        // $(this.getForm()).find("select").val("").trigger("change.select2");
+        $(this.getForm())
+            .find("input")
+            .not(":button, :submit, :reset, :hidden, :checkbox, :radio")
+            .val("")
+            .prop("selected", false);
+        $(this.getForm()).find('input[type="radio"]').prop("checked", false);
+        $(this.getForm()).find('input[type="checkbox"]').prop("checked", false);
+        $(this.getForm()).find("select").val("").trigger("change.select2");
         this.events.trigger("cleared");
     }
 
@@ -427,7 +420,7 @@ export class FormBuilder {
         } else {
             formElement.events.on("changed", (_formElement) => {
                 const name = _formElement.name;
-                const value = _formElement.getValue();
+                const value = _formElement.value;
                 // TODO check how this works with names like name[a][b][c]
                 if (_formElement.type !== "search") {
                     this.events.trigger("changed.field", _formElement, [_formElement, name, value]);
@@ -436,7 +429,6 @@ export class FormBuilder {
                 }
             });
 
-            /*
             const locationField =
                 _this.mapsvg &&
                 _this.mapsvg.objectsRepository &&
@@ -465,8 +457,6 @@ export class FormBuilder {
                     }
                 });
             }
-
-             */
         }
     }
 
@@ -512,9 +502,7 @@ export class FormBuilder {
             const formElement = <FormElement>this.formElements.get(field.name);
             if (formElement) {
                 if (typeof data[field.name] !== "undefined") {
-                    if (formElement.getValue() !== data[field.name]) {
-                        formElement.setValue(data[field.name]);
-                    }
+                    formElement.setValue(data[field.name]);
                 } else {
                     formElement.setValue(null);
                 }
@@ -633,8 +621,7 @@ export class FormBuilder {
         // then add the "Clear all" button
         if (_this.filtersMode && _this.clearButton) {
             _this.elements.buttons.clearButton = $(
-                '<div class="form-group mapsvg-filters-reset-container">' +
-                    '<button type="button" class="btn btn-outline-secondary mapsvg-filters-reset">' +
+                '<div class="form-group mapsvg-filters-reset-container"><button class="btn btn-outline-secondary mapsvg-filters-reset">' +
                     _this.clearButtonText +
                     "</button></div>"
             )[0];
@@ -819,7 +806,6 @@ export class FormBuilder {
         // $('body').off('keydown.mapsvg');
 
         this.formElements.forEach((formElement) => formElement.destroy());
-        this.mediaUploader && this.mediaUploader.off("select");
 
         MapSVG.formBuilder = null;
         this.events.trigger("close", this, [this]);

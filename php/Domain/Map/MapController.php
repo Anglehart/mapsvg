@@ -321,7 +321,6 @@ class MapController extends Controller {
             $mapData['options'] = str_replace("!mapsvg-encoded-tbl", "table", $mapData['options']);
             $mapData['options'] = str_replace("!mapsvg-encoded-db", "database", $mapData['options']);
             $mapData['options'] = str_replace("!mapsvg-encoded-vc", "varchar", $mapData['options']);
-            $mapData['options'] = str_replace("!mapsvg-encoded-int", "int(11)", $mapData['options']);
         }
 
         $mapsRepository = new MapsRepository();

@@ -304,13 +304,7 @@ Math.hypot =
 SVGElement.prototype.getTransformToElement =
     SVGElement.prototype.getTransformToElement ||
     function (toElement) {
-        let value;
-        try {
-            value = toElement.getScreenCTM().inverse().multiply(this.getScreenCTM());
-        } catch (e) {
-            return;
-        }
-        return value;
+        return toElement.getScreenCTM().inverse().multiply(this.getScreenCTM());
     };
 
 Map.prototype.toArray = function () {
@@ -413,93 +407,7 @@ MapSVG.fixColorHash = (color) => {
         color = "#" + color;
     }
     return color;
-};
-
-/**
- * Delays method execution.
- * For example, it can be used in search input fields to prevent sending
- * an ajax request on each key press.
- * @param {Function} method
- * @param {number} delay
- * @param {object} scope
- * @param {array} params
- * @private
- */
-MapSVG.throttle = (method, delay, scope, params) => {
-    clearTimeout(method._tId);
-    method._tId = setTimeout(function () {
-        method.apply(scope, params);
-    }, delay);
-};
-MapSVG.geocode = (query, callback) => {
-    if (!window.google) {
-        console.error("MapSVG: can't do Geocoding - Google Maps API is not loaded.");
-        jQuery.growl.error({
-            title: "Error",
-            message: "Google Maps API files are not loaded",
-        });
-        return false;
-    }
-    if (!MapSVG.options.google_api_key) {
-        jQuery.growl.error({
-            title: "Error",
-            message: "Google Maps API key is not provided",
-        });
-        return false;
-    }
-    if (!MapSVG.geocoder) {
-        MapSVG.geocoder = new google.maps.Geocoder();
-    }
-
-    MapSVG.throttle(MapSVG.geocoder.geocode, 500, MapSVG.geocoder, [
-        query,
-        function (results, status) {
-            if (status === "OK") {
-                callback(results);
-            } else {
-                jQuery.growl.error({
-                    title: "Error: " + status,
-                    message:
-                        "There is some problem with Google API keys. See browser's console for more details",
-                });
-            }
-        },
-    ]);
-};
-
-MapSVG.handleFailedRequest = (response) => {
-    var message = "";
-
-    if (response.status === 403) {
-        if (response.responseText.indexOf("Wordfence") !== -1) {
-            message +=
-                "The request has been blocked by Wordfence. " +
-                'Switch Wordfence to "Learning mode", and save the map settings again. ' +
-                "If the settings are saved successfully, you can switch Wordfence back to normal mode.";
-        } else {
-            message +=
-                "The request has been blocked by your server. " +
-                "Do you have mod_sec Apache's module enabled? If that's the case you need to change its settings.";
-        }
-    } else {
-        if (response && response.responseText) {
-            try {
-                var _response = JSON.parse(response.responseText);
-                if (_response && _response.data && _response.data.error) {
-                    message = _response.data.error;
-                }
-            } catch (e) {
-                null;
-            }
-        }
-    }
-
-    $.growl.error({
-        title: "Error: " + response.status + " " + response.statusText,
-        message: message,
-        duration: 30000,
-    });
-};
+}
 
 if (!Object.values) {
     Object.values = function (object) {

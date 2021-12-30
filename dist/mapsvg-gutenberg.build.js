@@ -121,10 +121,6 @@ class Test extends Component {
 
     window.MapSVG.markerImages = window.mapsvgMarkerImages;
     window.MapSVG.googleApiKey = window.googleApiKey;
-    var external = {
-      markerImages: window.mapsvgMarkerImages,
-      googleApiKey: window.googleApiKey
-    };
     var source = window.MapSVG.googleApiKey ? window.mapsPath + "/geo-calibrated/empty.svg" : window.mapsPath + "/geo-calibrated/world.svg";
     var mapOptions = {
       // TODO change the source
@@ -133,7 +129,6 @@ class Test extends Component {
         on: false
       },
       fitMarkers: true,
-      defaultMarkerImage: window.MapSVG.urls.root + "markers/_pin_default.png",
       containers: {
         header: {
           on: false
@@ -148,11 +143,6 @@ class Test extends Component {
           this.mapsvg = _mapsvg;
           this.mapsvg.setMarkersEditMode(true);
           var meta = wp.data.select("core/editor").getEditedPostAttribute("meta");
-
-          if (!meta) {
-            meta = [];
-          }
-
           var formData = {};
 
           if (meta.mapsvg_location && meta.mapsvg_location !== "null") {
@@ -165,7 +155,7 @@ class Test extends Component {
 
             _mapsvg.markerAdd(marker);
 
-            formData["location"] = location.getData();
+            formData["location"] = location;
 
             if (this.mapsvg.options.googleMaps.on) {
               var coords = {
@@ -207,22 +197,21 @@ class Test extends Component {
                     this.watchMarkerChanges(locationFormElement, this.locationCopy);
                     this.mapsvg.setEditingMarker(this.locationCopy.marker);
                   }
+
+                  this.mapsvg.setMarkerEditHandler(location => {
+                    if (this.locationCopy) {
+                      this.mapsvg.markerDelete(this.locationCopy.marker);
+                    }
+
+                    this.locationCopy = location;
+                    this.mapsvg.setEditingMarker(this.locationCopy.marker);
+                    const object = formBuilder.getData();
+                    const img = this.mapsvg.getMarkerImage(object);
+                    this.locationCopy.marker.setImage(img);
+                    locationFormElement.setValue(location.getData());
+                    this.watchMarkerChanges(locationFormElement, this.locationCopy);
+                  });
                 }
-
-                this.mapsvg.setMarkerEditHandler(location => {
-                  if (this.locationCopy) {
-                    this.mapsvg.markerDelete(this.locationCopy.marker);
-                  }
-
-                  this.locationCopy = location;
-                  this.mapsvg.setEditingMarker(this.locationCopy.marker);
-                  const object = formBuilder.getData(); // const img = this.mapsvg.getMarkerImage(object, );
-                  // this.locationCopy.marker.setImage(img);
-
-                  locationFormElement.setValue(location.getData());
-                  locationFormElement.triggerChanged();
-                  this.watchMarkerChanges(locationFormElement, this.locationCopy);
-                });
               },
               "changed.field": (formElement, name, value) => {
                 if (formElement.type === "location") {
@@ -267,7 +256,7 @@ class Test extends Component {
     };
     var map = new mapsvg.map("mapsvg", {
       options: mapOptions
-    }, external);
+    });
   }
 
   createLocationCopy(locationFieldData) {

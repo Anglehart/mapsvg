@@ -91,17 +91,7 @@ export class SelectFormElement extends FormElement {
         }
     }
     setInputValue(value) {
-        if (this.multiselect) {
-            if (this.value) {
-                $(this.inputs.select).val(this.value.map((el) => el.value));
-            }
-            else {
-                $(this.inputs.select).val([]);
-            }
-        }
-        else {
-            this.inputs.select.value = this.value;
-        }
+        this.inputs.select.value = value;
         $(this.inputs.select).trigger("change.select2");
     }
 }

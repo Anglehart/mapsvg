@@ -98,9 +98,9 @@
             <select class="form-control select-map-list span2"
                     id="mapsvg-svg-file-select" style="width: 250px;">
                 <option value="">New SVG map</option>
-                <?php if (isset($data['svgFiles'])) foreach ($data['svgFiles'] as $file) { ?>
-                    <option data-relative-url="<?php echo esc_attr($file->relativeUrl) ?>">
-                        <?php echo esc_html($file->pathShort) ?></option>
+                <?php if (isset($data['svgFiles'])) foreach ($data['svgFiles'] as $m) { ?>
+                    <option data-path="<?php echo esc_attr($m->path) ?>">
+                        <?php echo esc_html($m->pathShort) ?></option>
                 <?php } ?>
             </select>
         </form>
@@ -233,6 +233,7 @@
         </thead>
         <tbody id="mapsvg-table">
         <?php foreach ($data['maps'] as $m) { ?>
+            <?php setup_postdata($m); ?>
             <?php $needsUpgrade = version_compare($m->version, '3.0.0', '<'); ?>
 
             <tr data-id="<?php echo $m->id ?>" data-title="<?php echo $m->title ?>">

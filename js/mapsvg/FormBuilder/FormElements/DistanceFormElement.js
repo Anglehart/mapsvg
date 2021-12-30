@@ -189,7 +189,7 @@ export class DistanceFormElement extends FormElement {
         this.inputs.units = ($(this.domElements.main).find('[name="distanceUnits"]')[0]);
         this.inputs.geoPoint = ($(this.domElements.main).find('[name="distanceGeoPoint"]')[0]);
         this.inputs.length = ($(this.domElements.main).find('[name="distanceLength"]')[0]);
-        this.inputs.address = ($(this.domElements.main).find('[name="distance"]')[0]);
+        this.inputs.address = ($(this.domElements.main).find('[name="distanceAddress"]')[0]);
     }
     getSchema() {
         const schema = super.getSchema();

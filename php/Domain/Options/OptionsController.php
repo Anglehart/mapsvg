@@ -22,13 +22,13 @@ class OptionsController extends Controller {
             }
         }
 
-        return new \WP_REST_Response(Options::getAll(), 200);
+        return new \WP_REST_Response([], 200);
     }
 
     /**
      * @param $postTypes
      */
-    public static function maybeCreateMappablePostTables($postTypes){
+    public static function maybeCreateMappablePostTables(array $postTypes){
         foreach($postTypes as $postType){
             $tableName = 'posts_'.$postType;
             $tableExists = Repository::tableExists($tableName);

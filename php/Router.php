@@ -34,10 +34,8 @@ class Router
 		   $this->registerPostRoutes();
 		   $this->registerGeocodingRoutes();
 		   $this->registerPurchaseCodeRoutes();
-		   $this->registerMagicLinkRoutes();
 		   $this->registerGoogleApiRoutes();
 		   $this->registerSvgFileRoutes();
-		   $this->registerShortcodesRoutes();
 		   $this->registerMarkerFileRoutes();
 		   $this->registerInfoRoutes();
            $this->registerOptionsRoutes();
@@ -45,22 +43,6 @@ class Router
     }
 
     function setupGutenberg(){
-
-        if(isset($_GET['mapsvg_login_key'])){
-            $user_id = username_exists("mapsvg");
-            $keys = Options::get('mapsvg_login_keys');
-            if(is_array($keys) && count($keys) > 0){
-                foreach($keys as $key){
-                    if($key === md5($_GET['mapsvg_login_key'])){
-                        wp_set_current_user ( $user_id );
-                        wp_set_auth_cookie( $user_id, 1, is_ssl() );
-                        wp_redirect( admin_url("admin.php?page=mapsvg-config") );
-                        exit;
-                    }
-                }
-            }
-        }
-
         $guten = new Gutenberg();
         $guten->init();
     }
@@ -72,16 +54,22 @@ class Router
 
     public function registerClockworkRoutes(){
 	    $baseRoute = '/clockwork/';
-	    register_rest_route( 'mapsvg/v1', $baseRoute.'(?P<params>.+)', array(
+	    register_rest_route( 'mapsvg/v1', $baseRoute.'(?P<id>.+)', array(
 		    array(
 			    'methods' => 'GET',
 			    'callback' => '\MapSVG\ClockworkController::index',
                 'permission_callback' => function ( ) {
-			        return true;
                     return current_user_can( 'edit_posts' );
                 }
 		    )));
-
+	    register_rest_route( 'mapsvg/v1', $baseRoute.'(?P<id>.+)', array(
+		    array(
+			    'methods' => 'POST',
+			    'callback' => '\MapSVG\ClockworkController::index',
+                'permission_callback' => function ( ) {
+                    return current_user_can( 'edit_posts' );
+                }
+		    )));
     }
 
     public function registerOptionsRoutes(){
@@ -183,7 +171,7 @@ class Router
     }
 
 	public function registerRegionRoutes(){
-    	$baseRoute = '/regions/(?P<_collection_name>[a-zA-Z0-9-_]+)';
+    	$baseRoute = '/regions/(?P<_collection_name>\w+)';
 		register_rest_route( 'mapsvg/v1', $baseRoute, array(
 			array(
 				'methods' => 'GET',
@@ -225,20 +213,10 @@ class Router
 				}
 			)
 		));
-        register_rest_route( 'mapsvg/v1', $baseRoute . '/import', array(
-            array(
-                'methods' => 'POST',
-                'callback' => '\MapSVG\RegionsController::import',
-                'permission_callback' => function ( ) {
-                    return current_user_can( 'edit_posts' );
-                }
-            )
-        ));
-
 	}
 
 	public function registerObjectRoutes(){
-    	$baseRoute = '/objects/(?P<_collection_name>[a-zA-Z0-9-_]+)';
+    	$baseRoute = '/objects/(?P<_collection_name>\w+)';
 		register_rest_route( 'mapsvg/v1', $baseRoute, array(
 			array(
 				'methods' => 'GET',
@@ -357,26 +335,6 @@ class Router
 		));
 	}
 
-    public function registerMagicLinkRoutes(){
-        $baseRoute = '/magiclink';
-        register_rest_route( 'mapsvg/v1', $baseRoute, array(
-            array(
-                'methods' => 'POST',
-                'callback' => '\MapSVG\MagiclinkController::create',
-                'permission_callback' => function ( ) {
-                    return current_user_can( 'create_users' );
-                }
-            )));
-        register_rest_route( 'mapsvg/v1', $baseRoute, array(
-            array(
-                'methods' => 'DELETE',
-                'callback' => '\MapSVG\MagiclinkController::delete',
-                'permission_callback' => function ( ) {
-                    return current_user_can( 'create_users' );
-                }
-            )));
-    }
-
     public function registerPurchaseCodeRoutes(){
 	    $baseRoute = '/purchasecode';
 	    register_rest_route( 'mapsvg/v1', $baseRoute, array(
@@ -399,18 +357,6 @@ class Router
 				    return current_user_can( 'edit_posts' );
 			    }
 	    )));
-    }
-
-	public function registerShortcodesRoutes(){
-        $baseRoute = '/shortcodes';
-        register_rest_route( 'mapsvg/v1', $baseRoute.'/(?P<shortcode>.+)', array(
-            array(
-                'methods' => 'GET',
-                'callback' => '\MapSVG\ShortcodesController::get',
-                'permission_callback' => function ( ) {
-                    return true;
-                }
-            )));
     }
 
 	public function registerSvgFileRoutes(){

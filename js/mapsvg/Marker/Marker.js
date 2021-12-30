@@ -1,25 +1,19 @@
 import { MapSVG } from "../Core/globals.js";
 import { MapObject } from "../MapObject/MapObject.js";
-import { Location, SVGPoint, ScreenPoint } from "../Location/Location.js";
+import { SVGPoint, ScreenPoint } from "../Location/Location.js";
 import { ViewBox } from "../Map/MapOptionsInterface.js";
 const $ = jQuery;
 export class Marker extends MapObject {
     constructor(params) {
         super(null, params.mapsvg);
+        this.src = params.location.getMarkerImageUrl();
         this.element = $("<div />").addClass("mapsvg-marker")[0];
-        this.image = $('<img src="" />').addClass("mapsvg-marker-image")[0];
-        if (params.object) {
-            this.setObject(params.object);
-        }
-        if (!(params.location instanceof Location)) {
-            throw new Error("MapSVG.Marker: no Location provided for Marker initializaton");
-        }
-        else {
-            this.location = params.location;
-            this.location.marker = this;
-        }
-        this.setImage(this.location.imagePath);
+        this.image = $('<img src="' + this.src + '" />').addClass("mapsvg-marker-image")[0];
         $(this.element).append(this.image);
+        this.location = params.location;
+        this.location.marker = this;
+        this.mapsvg = params.mapsvg;
+        params.object && this.setObject(params.object);
         if (params.width && params.height) {
             this.setSize(params.width, params.height);
         }
@@ -28,14 +22,8 @@ export class Marker extends MapObject {
         }
         this.setId(this.mapsvg.markerId());
         this.setSvgPointFromLocation();
+        this.setImage(this.src);
         this.setAltAttr();
-    }
-    reload() {
-        this.setImage();
-        this.setSvgPointFromLocation();
-    }
-    getImagePath() {
-        return (this.object && this.object.getMarkerImage()) || this.location.getMarkerImage();
     }
     setSize(width, height) {
         this.width = width;
@@ -85,21 +73,24 @@ export class Marker extends MapObject {
                 this[setter](data[key]);
         }
     }
-    setImage(src, skipChangingLocationImage = false) {
-        if (!src) {
-            src = this.getImagePath();
-        }
-        this.src = MapSVG.safeURL(src);
+    setImage(src) {
+        if (!src)
+            return;
+        src = MapSVG.safeURL(src);
         const img = new Image();
         const marker = this;
+        this.src = src;
+        if (marker.image.getAttribute("src") !== "src") {
+            marker.image.setAttribute("src", src);
+        }
         img.onload = function () {
-            if (marker.image.getAttribute("src") !== "src") {
-                marker.image.setAttribute("src", marker.src);
-            }
             marker.setSize(this.width, this.height);
             marker.adjustScreenPosition();
         };
-        img.src = this.src;
+        img.src = src;
+        if (this.location && this.location.imagePath !== src) {
+            this.location.setImage(src);
+        }
         this.events.trigger("change");
     }
     setAltAttr() {
@@ -348,19 +339,11 @@ export class Marker extends MapObject {
         }
     }
     setLabel(html) {
-        if (html) {
-            if (!this.label) {
-                this.label = $("<div />").addClass("mapsvg-marker-label")[0];
-                $(this.element).append(this.label);
-            }
-            $(this.label).html(html);
+        if (!this.label) {
+            this.label = $("<div />").addClass("mapsvg-marker-label")[0];
+            $(this.element).append(this.label);
         }
-        else {
-            if (this.label) {
-                $(this.label).remove();
-                delete this.label;
-            }
-        }
+        $(this.label).html(html);
     }
     setCentered(on) {
         this.centered = on;

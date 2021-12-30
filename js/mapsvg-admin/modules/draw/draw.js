@@ -371,8 +371,8 @@
                     .post("svgfile/copy", { file: { path: _this.filepath } })
                     .done(function (data) {
                         // data = JSON.parse(data);
-                        if (data.file && data.file.relativeUrl) {
-                            _this.filepath = data.file.relativeUrl;
+                        if (data.file && data.file.path) {
+                            _this.filepath = data.file.path;
                             _this.mapsvg.update({ source: _this.filepath });
                             _this.admin.save(true);
                             _this.setReadOnly(false);
@@ -648,7 +648,7 @@
                     point.setAttribute("r", 5 / _this.mapsvg.getScale());
                     point.setAttribute("class", "mapsvg-path-point");
                     $(point).css("stroke-width", 1);
-                    $(point).attr("data-stroke-width", 1);
+                    $(point).data("stroke-width", 1);
                     $(point).data("index", index);
                     _this.svg[0].appendChild(point);
                     _this.editingShape.points.push(point);
@@ -662,13 +662,13 @@
             point.setAttribute("r", 5 / _this.mapsvg.getScale());
             point.setAttribute("class", "mapsvg-path-point mapsvg-path-point-new");
             $(point).css("stroke-width", 1);
-            $(point).attr("data-stroke-width", 1);
+            $(point).data("stroke-width", 1);
             $(point).hide();
             _this.svg[0].appendChild(point);
             _this.editingShape.newPoint = point;
 
             _this.loadIntersectionPoints();
-            _this.mapsvg.adjustStrokes();
+            _this.mapsvg.mapAdjustStrokes();
             _this.mapsvg.events.on("zoom", function () {
                 _this.adjustPointsSize();
             });
@@ -804,9 +804,9 @@
                 stroke: "rgba(255,100,100,0.4)",
                 "stroke-width": 1,
             })
-            .attr("data-stroke-width", 1);
+            .data("stroke-width", 1);
         _this.svg[0].appendChild(_this.editingShape.obj);
-        _this.mapsvg.adjustStrokes();
+        _this.mapsvg.mapAdjustStrokes();
 
         _this.loadSnapPoints();
         _this.map.on("mousemove.draw.mapsvg", function (e) {
@@ -900,8 +900,8 @@
                     if (obj.getAttribute(i)) obj.removeAttribute(i);
                 }
                 if (i === "stroke-width") {
-                    $(obj).attr("data-stroke-width", data[prop][i]);
-                    _this.mapsvg.adjustStrokes();
+                    $(obj).data("stroke-width", data[prop][i]);
+                    _this.mapsvg.mapAdjustStrokes();
                 } else {
                     $(obj).css(data[prop]);
                 }
@@ -1041,8 +1041,8 @@
 
             // Restore stroke-width, remove classes
             newSVG.find("path, polygon, circle, ellipse, rect").each(function (index) {
-                if ($(this).attr("data-stroke-width")) {
-                    $(this).css("stroke-width", $(this).attr("data-stroke-width"));
+                if ($(this).data("stroke-width")) {
+                    $(this).css("stroke-width", $(this).data("stroke-width"));
                 }
                 if ($(this).attr("class")) {
                     $(this).attr(
@@ -1124,15 +1124,13 @@
                     _this.mapsvg.options.svgFileVersion++;
 
                     _this.mapsvg.reloadRegions();
-                    _this.mapsvg.adjustStrokes();
+                    _this.mapsvg.mapAdjustStrokes();
 
                     _this.mapsvg.regionsRepository.reload().done(function () {
-                        _this.mapsvg.adjustStrokes();
+                        _this.mapsvg.mapAdjustStrokes();
                     });
                 })
-                .fail((response) => {
-                    MapSVG.handleFailedRequest(response);
-                })
+                .fail(function (data) {})
                 .always(function () {
                     $("#mapsvg-save-svg").buttonLoading(false);
                 });

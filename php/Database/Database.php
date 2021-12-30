@@ -59,7 +59,7 @@ class Database {
 		if($this->db->last_error){
 			$caller = $this->getCaller();
 			Logger::error($this->db->last_error);
-//            throw new \Exception('Method: '.$caller.'() / DB failed query'.(MAPSVG_DEBUG ? ': '.$this->db->last_error." / ".$this->db->last_query : ''));
+			Logger::error($this->db->last_query);
 			//throw new \Exception('Method: '.$caller.'() / DB failed query'.(MAPSVG_DEBUG ? ': '.$this->db->last_error." / ".$this->db->last_query : ''));
 		}
 	}

@@ -15,7 +15,7 @@ class RegionsRepository extends Repository {
 	 * Updates all provided regions in the database
 	 * @param array $objects
 	 */
-	public function createOrUpdateAll($objects){
+	public function createOrUpdateAll(array $objects){
 		$fields = array();
 		$duplicateUpdateMysql = array();
 		foreach($objects as $object){

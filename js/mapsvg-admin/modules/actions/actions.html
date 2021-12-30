@@ -29,8 +29,8 @@
                 <div class="col-md-9">
                     <div class="form-check pt-2">
                         <input class="form-check-input" type="checkbox" class="form-check-input"
-                               name="actions[region][click][addIdToUrl]"
-                               {{#if actions.region.click.addIdToUrl}}checked{{/if}}
+                               name="actions[region][click][addIdToUrl]" 
+                               {{#if actions.region.click.addIdToUrl}}checked{{/if}}  
                                data-live="change">
                         <label class="form-check-label">
                             Add Region ID to
@@ -55,7 +55,7 @@
                     </div>
                     <div class="mapsvg-form-subgroup">Zoom level
                         <select class="form-control mapsvg-select2" name="actions[region][click][zoomToLevel]"
-                                data-live="change" data-type="int">
+                                data-live="change">
                             <option value=" ">Auto</option>{{#each zoomLevels}}
                             <option
                                     {{#ifeq this @root.actions.region.click.zoomToLevel}}selected{{/ifeq}}>{{.}}</option>{{/each}}</select>
@@ -140,7 +140,7 @@
                             {{#if regionFields}}
                                 <optgroup label="Region">
                                     {{#each regionFields}}
-                                        <option {{#ifeq  ../actions.region.click.showAnotherMapField this}}selected{{/ifeq}}>{{this}}</option>
+                                        <option {{#ifeq  ../actions.region.click.showanothermapfield this}}selected{{/ifeq}}>{{this}}</option>
                                     {{/each}}
                                 </optgroup>
                             {{/if}}
@@ -257,7 +257,7 @@
                     </div>
                     <div class="mapsvg-form-subgroup">Zoom level
                         <select class="form-control mapsvg-select2" name="actions[marker][click][zoomToLevel]"
-                                data-live="change" data-type="int">
+                                data-live="change">
                             <option value=" ">Auto</option>{{#each zoomLevels}}
                             <option {{#ifeq this @root.actions.marker.click.zoomtolevel}}selected{{/
                             ifeq}} >{{.}}</option>{{/each}}</select>
@@ -282,8 +282,8 @@
                         </select>
                         <div class="form-check pt-2"
                              style="margin-top: 5px;">
-                            <input type="checkbox" class="form-check-input" name="actions[marker][click][newTab]"
-                                   {{#if actions.marker.click.newTab}}checked{{/if}}  data-live="change">
+                            <input type="checkbox" class="form-check-input" name="actions[marker][click][newTab]" 
+                                   {{#if actions.marker.click.newtab}}checked{{/if}}  data-live="change">
                             <label class="form-check-label">
                                 Open link in a
                                 new tab</label>
@@ -295,7 +295,7 @@
                 <label class="col-md-3 col-form-label">Marker touch</label>
                 <div class="col-md-9">
                     <div class="form-check pt-2">
-                        <input type="checkbox" class="form-check-input" name="actions[marker][touch][showPopover]"
+                        <input type="checkbox" class="form-check-input" name="actions[marker][touch][showPopover]" 
                                {{#if actions.marker.touch.showPopover}}checked{{/if}}  data-live="change">
                         <label class="form-check-label">
                             Show
@@ -343,7 +343,7 @@
                     <div class="form-check pt-2">
                         <input type="checkbox" class="form-check-input"
                                name="actions[directoryItem][click][fireMarkerOnClick]"
-                               {{#if  actions.directoryItem.click.fireMarkerOnClick}}checked{{/if}}
+                               {{#if  actions.directoryItem.click.fireregiononclick}}checked{{/if}}
                                data-live="change">
                         <label class="form-check-label">
                             Trigger <i>click</i> event for associated Marker</label>
@@ -351,7 +351,7 @@
                     <div class="form-check pt-2">
                         <input type="checkbox" class="form-check-input"
                                name="actions[directoryItem][click][showRegionPopover]"
-                               {{#if  actions.directoryItem.click.showRegionPopover}}checked{{/if}}
+                               {{#if  actions.directoryItem.click.fireregiononclick}}checked{{/if}}
                                data-live="change">
                         <label class="form-check-label">
                             Trigger <i>show popover</i> action for associated Region (if more
@@ -375,9 +375,9 @@
                     </div>
                     <div class="mapsvg-form-subgroup">Zoom level
                         <select class="form-control mapsvg-select2" name="actions[directoryItem][click][zoomToLevel]"
-                                data-live="change" data-type="int">
+                                data-live="change">
                             <option value=" ">Auto</option>{{#each zoomLevels}}
-                            <option {{#ifeq this @root.actions.directoryItem.click.zoomToLevel}}selected{{/
+                            <option {{#ifeq this @root.actions.directoryItem.click.zoomtolevel}}selected{{/
                             ifeq}} >{{.}}</option>{{/each}}</select>
                     </div>
                     <div class="form-check pt-2">
@@ -391,10 +391,10 @@
                     <div class="mapsvg-form-subgroup">Zoom level
                         <select class="form-control mapsvg-select2"
                                 name="actions[directoryItem][click][zoomToMarkerLevel]"
-                                data-live="change" data-type="int">
+                                data-live="change">
                             <option value=" ">Auto</option>{{#each zoomLevels}}
                             <option {{#ifeq this
-                                             @root.actions.directoryItem.click.zoomToMarkerLevel}}selected{{/ifeq}} >{{.}}</option>{{/each}}
+                                             @root.actions.directoryItem.click.zoomToMarker}}selected{{/ifeq}} >{{.}}</option>{{/each}}
                         </select>
                     </div>
                     <div class="form-check pt-2">
@@ -408,22 +408,14 @@
                     <div class="mapsvg-form-subgroup">Field with URL:
                         <select class="form-control mapsvg-select2" name="actions[directoryItem][click][linkField]"
                                 data-live="change">
-                            <option value=" ">...</option>
-                            {{#if regionFields}}
-                                <optgroup label="Region">
-                                    {{log regionFields}}
-                                    {{#each regionFields}}
-                                    <option {{#ifeq  ../actions.directoryItem.click.linkField this}}selected{{/ifeq}}>{{this}}</option>
-                                    {{/each}}
-                                </optgroup>
-                            {{/if}}
-                            {{#if databaseFields}}
-                                <optgroup label="Database Object">
-                                    {{#each databaseFields}}
-                                        <option {{#ifeq ../actions.directoryItem.click.linkfield this}}selected{{/ifeq}}>{{this}}</option>
-                                    {{/each}}
-                                </optgroup>
-                            {{/if}}
+                            <option value=" ">...</option>{{#if regionFields}}
+                            <optgroup label="Region">{{#each regionFields}}
+                                <option {{#ifeq  ../actions.directoryItem.click.linkField this}}selected{{/ifeq}} >{{this}}</option>{{/each}}
+                            </optgroup>{{/if}} {{#if databaseFields}}
+                            <optgroup
+                                    label="Database Object">{{#each databaseFields}}
+                                <option {{#ifeq ../actions.directoryItem.click.linkfield this}}selected{{/ifeq}} >{{this}}</option>{{/each}}
+                            </optgroup>{{/if}}
                         </select>
                         <div class="form-check pt-2"
                              style="margin-top: 5px;">
@@ -451,7 +443,7 @@
                             <option value=" ">...</option>
                             {{#if regionFields}}
                             <optgroup label="Region">{{#each regionFields}}
-                                <option {{#ifeq  ../actions.directoryItem.click.showAnotherMapField this}}selected{{/ifeq}} >{{this}}
+                                <option {{#ifeq  ../actions.directoryItem.click.showAnotherMap this}}selected{{/ifeq}} >{{this}}
                                 </option>{{/each}}
                             </optgroup>
                         {{/if}}

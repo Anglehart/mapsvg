@@ -106,7 +106,7 @@ export class Query implements QueryInterface {
         this.filters[field] = value;
     }
     hasFilters(): boolean {
-        return Object.keys(this.filters).length > 0 || this.search.length > 0;
+        return Object.keys(this.filters).length > 0;
     }
     removeFilter(fieldName: string): void {
         this.filters[fieldName] = null;

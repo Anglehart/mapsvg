@@ -19,7 +19,6 @@ import { DirectoryController } from "../Directory/Directory";
 import { Events } from "../Core/Events";
 import { Repository } from "../Core/Repository";
 import { FiltersController } from "../Filters/Filters";
-import { MapObject } from "../MapObject/MapObject";
 import { DetailsController } from "../Details/Details";
 import { PopoverController } from "../Popover/Popover";
 import { FormBuilder } from "../FormBuilder/FormBuilder";
@@ -28,7 +27,7 @@ import { Server } from "../Infrastructure/Server/Server";
 import { Tooltip } from "../Tooltips/Tooltip";
 const $ = jQuery;
 class MapSVGMap {
-    constructor(containerId, mapParams, externalParams) {
+    constructor(containerId, mapParams) {
         this.markerOptions = { src: MapSVG.urls.root + "markers/pin1_red.png" };
         const options = mapParams.options;
         this.updateOutdatedOptions(options);
@@ -51,12 +50,10 @@ class MapSVGMap {
         this.containers = {
             map: document.getElementById(this.containerId),
             scrollpane: $('<div class="mapsvg-scrollpane"></div>')[0],
-            scrollpaneWrap: $('<div class="mapsvg-scrollpane-wrap"></div>')[0],
             layers: $('<div class="mapsvg-layers-wrap"></div>')[0],
         };
         this.containers.map.appendChild(this.containers.layers);
-        this.containers.map.appendChild(this.containers.scrollpaneWrap);
-        this.containers.scrollpaneWrap.appendChild(this.containers.scrollpane);
+        this.containers.map.appendChild(this.containers.scrollpane);
         this.whRatio = 0;
         this.isScrolling = false;
         this.markerOptions = {};
@@ -74,14 +71,7 @@ class MapSVGMap {
         this.regionsRepository = new Repository("region", "regions/" + this.options.database.regionsTableName);
         this.regionsRepository.query.update({ perpage: 0 });
         this.objectsRepository = new Repository("object", "objects/" + this.options.database.objectsTableName);
-        if (this.options.database.noFiltersNoLoad) {
-            this.objectsRepository.setNoFiltersNoLoad(true);
-        }
-        this.objectsRepository.query.update({
-            perpage: this.options.database.pagination.on
-                ? this.options.database.pagination.perpage
-                : 0,
-        });
+        this.objectsRepository.query.update({ perpage: this.options.database.pagination.perpage });
         this.schemaRepository = new SchemaRepository();
         this.markers = new ArrayIndexed("id");
         this.markersClusters = new ArrayIndexed("id");
@@ -114,17 +104,6 @@ class MapSVGMap {
             zoomLimit: true,
             maxZoomService: null,
         };
-        this.afterLoadBlockers = 1;
-        this.loaded = false;
-        if (this.id) {
-            this.afterLoadBlockers += 2;
-        }
-        if (this.options.googleMaps.on) {
-            this.afterLoadBlockers++;
-        }
-        if (this.filtersShouldBeShown()) {
-            this.afterLoadBlockers++;
-        }
         this.init();
     }
     urlToRelativePath(url) {
@@ -167,7 +146,7 @@ class MapSVGMap {
             const id = $(this)[0].getAttribute("id");
             if (id) {
                 const title = $(this)[0].getAttribute("title");
-                options.push({ label: title || id, value: id });
+                options.push({ label: title, value: id });
             }
         });
         optionGroups.push({ title: "SVG Layers / Groups", options: options });
@@ -177,7 +156,7 @@ class MapSVGMap {
             const id = $(this)[0].getAttribute("id");
             if (id) {
                 const title = $(this)[0].getAttribute("title");
-                options2.push({ label: title || id, value: id });
+                options2.push({ label: title, value: id });
             }
         });
         optionGroups.push({ title: "Other SVG objects", options: options2 });
@@ -266,7 +245,7 @@ class MapSVGMap {
     loadDirectory() {
         if (!this.editMode &&
             this.options.menu.source === "database" &&
-            !this.objectsRepository.loaded) {
+            this.objectsRepository.getLoaded().length === 0) {
             return;
         }
         if (this.options.menu.on) {
@@ -653,7 +632,7 @@ class MapSVGMap {
             region.objects = [];
         });
         this.objectsRepository.getLoaded().forEach((obj, index) => {
-            const regions = obj.getRegionsForTable(this.options.database.regionsTableName);
+            const regions = obj.getRegionsForTable(this.regionsRepository.schema.name);
             if (regions && regions.length) {
                 regions.forEach((region) => {
                     const r = this.getRegion(region.id);
@@ -672,7 +651,7 @@ class MapSVGMap {
                 if (name == "directoryItem" || name == "directoryCategoryItem") {
                     const dirItemTemplate = this.options.templates.directoryItem;
                     t =
-                        '{{#each items}}<div id="mapsvg-directory-item-{{#if id_no_spaces}}{{id_no_spaces}}{{else}}{{id}}{{/if}}" class="mapsvg-directory-item" data-object-id="{{id}}">' +
+                        '{{#each items}}<div id="mapsvg-directory-item-{{id}}" class="mapsvg-directory-item" data-object-id="{{id}}">' +
                             dirItemTemplate +
                             "</div>{{/each}}";
                     if (this.options.menu.categories &&
@@ -965,7 +944,7 @@ class MapSVGMap {
         }
         if (typeof this.options.tooltips.maxWidth !== "undefined" ||
             typeof this.options.tooltips.minWidth !== "undefined") {
-            this.controllers.tooltip.setSize(this.options.tooltips.minWidth, this.options.tooltips.maxWidth);
+            this.controllers.tooltip.setSize(this.options.tooltips.maxWidth, this.options.tooltips.minWidth);
         }
     }
     setPopovers(options) {
@@ -1048,8 +1027,10 @@ class MapSVGMap {
         this.scroll.ty = Math.round((this.svgDefault.viewBox.y - this.viewBox.y) * this.scale);
         if (this.googleMaps.map && adjustGoogleMap !== false) {
             const googlePrevZoom = this.googleMaps.map.getZoom();
-            this.googleMaps.map.setCenter(this.getCenterGeoPoint());
             this.googleMaps.map.setZoom(this.getZoomForGoogle());
+            if (googlePrevZoom !== this.googleMaps.map.getZoom()) {
+                this.googleMaps.map.setCenter(this.getCenterGeoPoint());
+            }
         }
         else {
             this.containers.scrollpane.style.transform =
@@ -1059,7 +1040,7 @@ class MapSVGMap {
         }
         this.movingItemsAdjustScreenPosition();
         if (isZooming) {
-            this.adjustStrokes();
+            this.mapAdjustStrokes();
             this.toggleSvgLayerOnZoom();
             if (this.options.clustering.on) {
                 this.throttle(this.clusterizeOnZoom, 400, this);
@@ -1133,7 +1114,7 @@ class MapSVGMap {
         const xyNE = this.converter.convertGeoToSVG(ne);
         const xySW = this.converter.convertGeoToSVG(sw);
         if (xyNE.x < xySW.y) {
-            const mapPointsWidth = (this.svgDefault.viewBox.width / this.converter.mapLonDelta) * 360;
+            const mapPointsWidth = (this.svgDefault.viewBox.width / this.mapLonDelta) * 360;
             xySW.x = -(mapPointsWidth - xySW.y);
         }
         const width = xyNE.x - xySW.x;
@@ -1142,7 +1123,6 @@ class MapSVGMap {
         this.setViewBox(viewBox);
     }
     redraw() {
-        this.disableAnimation();
         if (MapSVG.browser.ie) {
             $(this.containers.svg).css({ height: this.svgDefault.viewBox.height });
         }
@@ -1163,8 +1143,7 @@ class MapSVGMap {
             this.controllers.directory.updateScroll();
         }
         this.movingItemsAdjustScreenPosition();
-        this.adjustStrokes();
-        this.enableAnimation();
+        this.mapAdjustStrokes();
     }
     setSize(width, height, responsive) {
         this.options.width = width;
@@ -1242,11 +1221,11 @@ class MapSVGMap {
             this.setZoomLevels();
         }
         $.extend(true, this.options, { zoom: options });
-        $(this.containers.scrollpaneWrap).off("wheel.mapsvg");
+        $(this.containers.map).off("wheel.mapsvg");
         if (this.options.zoom.mousewheel) {
             if (MapSVG.browser.firefox) {
                 this.firefoxScroll = { insideIframe: false, scrollX: 0, scrollY: 0 };
-                $(this.containers.scrollpaneWrap)
+                $(this.containers.map)
                     .on("mouseenter", () => {
                     this.firefoxScroll.insideIframe = true;
                     this.firefoxScroll.scrollX = window.scrollX;
@@ -1260,20 +1239,20 @@ class MapSVGMap {
                         window.scrollTo(this.firefoxScroll.scrollX, this.firefoxScroll.scrollY);
                 });
             }
-            $(this.containers.scrollpaneWrap).on("wheel.mapsvg", (event) => {
-                event.preventDefault();
-                this.mouseWheelZoom(event);
-                return false;
-            });
-            $(this.layers.markers).on("wheel.mapsvg", (event) => {
-                event.preventDefault();
-                this.mouseWheelZoom(event);
-                return false;
+            $(this.containers.map).on("wheel.mapsvg", (event) => {
+                this.throttle(this.mouseWheelZoom, 500, this, [event]);
+                return;
             });
         }
         this.canZoom = true;
     }
     mouseWheelZoom(event) {
+        if ($(event.target).hasClass("mapsvg-popover") ||
+            $(event.target).closest(".mapsvg-popover").length ||
+            $(event.target).hasClass("mapsvg-details-container") ||
+            $(event.target).closest(".mapsvg-details-container").length) {
+            return;
+        }
         event.preventDefault();
         const d = Math.sign(-event.originalEvent.deltaY);
         const center = this.getSvgPointAtClick(event.originalEvent);
@@ -1786,17 +1765,6 @@ class MapSVGMap {
             this.updateFilterTags();
         }
     }
-    setGlobalDistanceFilter() {
-        if (this.objectsRepository &&
-            this.objectsRepository.query.filters &&
-            this.objectsRepository.query.filters.distance) {
-            const dist = this.objectsRepository.query.filters.distance;
-            MapSVG.distanceSearch = this.objectsRepository.query.filters.distance;
-        }
-        else {
-            MapSVG.distanceSearch = null;
-        }
-    }
     updateFilterTags() {
         $(this.containers.filterTags) && $(this.containers.filterTags).empty();
         for (const field_name in this.objectsRepository.query.filters) {
@@ -2037,13 +2005,11 @@ class MapSVGMap {
                 });
                 this.controllers.directory._init();
             }
-            if (options.source) {
+            else {
                 this.controllers.directory.repository =
                     this.options.menu.source === "regions"
                         ? this.regionsRepository
                         : this.objectsRepository;
-            }
-            if (options.sortBy || options.sortDirection) {
                 this.controllers.directory.repository.query.update({
                     sort: [
                         {
@@ -2052,13 +2018,11 @@ class MapSVGMap {
                         },
                     ],
                 });
-            }
-            if (options.filterout) {
-                const f = {};
-                f[this.options.menu.filterout.field] = this.options.menu.filterout.val;
-                this.controllers.directory.repository.query.setFilterOut(f);
-            }
-            if (options.location) {
+                if (options.filterout) {
+                    const f = {};
+                    f[this.options.menu.filterout.field] = this.options.menu.filterout.val;
+                    this.controllers.directory.repository.query.setFilterOut(f);
+                }
                 this.controllers.directory.scrollable = this.shouldBeScrollable(this.options.menu.location);
             }
             let $container;
@@ -2135,6 +2099,9 @@ class MapSVGMap {
         if (this.options.googleMaps.on) {
             $(this.containers.map).toggleClass("mapsvg-with-google-map", true);
             if (!MapSVG.googleMapsApiLoaded) {
+                this.events.on("googleMapsBoundsChanged", (bounds) => {
+                    this.setViewBoxByGoogleMapsOverlay();
+                });
                 this.loadGoogleMapsAPI(() => {
                     this.setGoogleMaps();
                 }, () => {
@@ -2164,7 +2131,6 @@ class MapSVGMap {
                         streetViewControl: false,
                         zoomControl: false,
                         styles: options.styleJSON,
-                        tilt: 0,
                     });
                     let overlay;
                     const southWest = new google.maps.LatLng(this.geoViewBox.sw.lat, this.geoViewBox.sw.lng);
@@ -2203,13 +2169,8 @@ class MapSVGMap {
                                 this.setInitialViewBox(this.viewBox);
                                 this.toggleSvgLayerOnZoom();
                                 this.events.trigger("googleMapsLoaded");
-                                this.afterLoadBlockers--;
-                                this.finalizeMapLoading();
                             }, 300);
                         }, 1);
-                    });
-                    this.events.on("googleMapsBoundsChanged", (bounds) => {
-                        this.setViewBoxByGoogleMapsOverlay();
                     });
                 }
                 else {
@@ -2218,7 +2179,6 @@ class MapSVGMap {
                     if (options.type) {
                         this.googleMaps.map.setMapTypeId(options.type);
                     }
-                    this.setViewBoxByGoogleMapsOverlay();
                 }
             }
         }
@@ -2348,9 +2308,7 @@ class MapSVGMap {
             libraries = "&libraries=" + gmLibraries.join(",");
         }
         this.googleMapsScript.src =
-            "https://maps.googleapis.com/maps/api/js?language=" +
-                this.options.googleMaps.language +
-                "&key=" +
+            "https://maps.googleapis.com/maps/api/js?language=en&key=" +
                 this.options.googleMaps.apiKey +
                 libraries;
         document.head.appendChild(this.googleMapsScript);
@@ -2420,7 +2378,7 @@ class MapSVGMap {
         this.loadFiltersController(this.containers.filtersModal, true);
     }
     loadFiltersController(container, modal = false) {
-        if (!this.filtersShouldBeShown()) {
+        if (this.filtersSchema.getFields().length === 0) {
             return;
         }
         let filtersInDirectory, filtersHide;
@@ -2448,7 +2406,18 @@ class MapSVGMap {
         }
         else {
             this.changedSearch = () => {
-                this.filtersRepository.query.searchFallback = this.filtersSchema.getFieldByType("search").searchFallback;
+                this.throttle(this.filtersRepository.reload, 400, this.filtersRepository);
+            };
+            this.changedFields = () => {
+                this.throttle(this.filtersRepository.reload, 400, this.filtersRepository);
+            };
+        }
+        if (this.options.filters.searchButton) {
+            this.changedFields = null;
+            this.changedSearch = null;
+        }
+        else {
+            this.changedSearch = () => {
                 this.throttle(this.filtersRepository.reload, 400, this.filtersRepository);
             };
             this.changedFields = () => {
@@ -2476,9 +2445,8 @@ class MapSVGMap {
             searchButtonText: this.options.filters.searchButtonText,
             padding: this.options.filters.padding,
             events: {
-                cleared: () => {
+                "cleared.fields": () => {
                     this.deselectAllRegions();
-                    this.filtersRepository.reload();
                 },
                 "changed.fields": this.changedFields,
                 "changed.search": this.changedSearch,
@@ -2487,8 +2455,6 @@ class MapSVGMap {
                 },
                 loaded: () => {
                     this.controllers.directory && this.controllers.directory.updateTopShift();
-                    this.afterLoadBlockers--;
-                    this.finalizeMapLoading();
                 },
                 "click.btn.showFilters": () => {
                     this.loadFiltersModal();
@@ -2496,11 +2462,6 @@ class MapSVGMap {
             },
         });
         this.controllers.filters._init();
-    }
-    filtersShouldBeShown() {
-        return (this.options.filters.on &&
-            this.options.filtersSchema &&
-            this.options.filtersSchema.length > 0);
     }
     textSearch(text, fallback = false) {
         const query = new Query({
@@ -2701,15 +2662,15 @@ class MapSVGMap {
     viewBoxGetBySize(width, height) {
         const new_ratio = width / height;
         const old_ratio = this.svgDefault.viewBox.width / this.svgDefault.viewBox.height;
-        const vb = this.svgDefault.viewBox.clone();
+        const vb = $.extend([], this.svgDefault.viewBox);
         if (new_ratio != old_ratio) {
             if (new_ratio > old_ratio) {
-                vb.width = this.svgDefault.viewBox.height * new_ratio;
-                vb.x = this.svgDefault.viewBox.x - (vb.width - this.svgDefault.viewBox.width) / 2;
+                vb[2] = this.svgDefault.viewBox.height * new_ratio;
+                vb[0] = this.svgDefault.viewBox.x - (vb[2] - this.svgDefault.viewBox.width) / 2;
             }
             else {
-                vb.height = this.svgDefault.viewBox.width / new_ratio;
-                vb.y = this.svgDefault.viewBox.y - (vb.height - this.svgDefault.viewBox.height) / 2;
+                vb[3] = this.svgDefault.viewBox.width / new_ratio;
+                vb[1] = this.svgDefault.viewBox.y - (vb[3] - this.svgDefault.viewBox.height) / 2;
             }
         }
         return vb;
@@ -2758,25 +2719,8 @@ class MapSVGMap {
         const bottomLat = this.converter.convertSVGToGeo(p4).lat;
         return [leftLon, topLat, rightLon, bottomLat];
     }
-    setStrokes() {
-        $(this.containers.svg)
-            .find("path, polygon, circle, ellipse, rect, line, polyline")
-            .each((index, elem) => {
-            const width = MapObject.getComputedStyle("stroke-width", elem);
-            if (width) {
-                $(elem).attr("data-stroke-width", width.replace("px", ""));
-            }
-        });
-    }
-    adjustStrokes() {
-        $(this.containers.svg)
-            .find("path, polygon, circle, ellipse, rect, line, polyline")
-            .each((index, elem) => {
-            const width = elem.getAttribute("data-stroke-width");
-            if (width) {
-                $(elem).css("stroke-width", Number(width) / this.scale);
-            }
-        });
+    mapAdjustStrokes() {
+        this.regions.forEach((region) => region.adjustStroke(this.scale));
     }
     zoomIn(center) {
         if (this.canZoom) {
@@ -2801,35 +2745,9 @@ class MapSVGMap {
         }
     }
     zoomTo(mapObjects, zoomToLevel) {
-        if (mapObjects instanceof Marker || mapObjects instanceof MarkerCluster) {
-            return this.zoomToMarkerOrCluster(mapObjects, zoomToLevel);
-        }
-        else {
-            const convertedObjects = !Array.isArray(mapObjects) ? [mapObjects] : mapObjects;
-            const bbox = this.getGroupBBox(convertedObjects);
-            return this.fitViewBox(bbox, zoomToLevel);
-        }
-    }
-    zoomToMarkerOrCluster(mapObject, zoomToLevel) {
-        this.zoomLevel = zoomToLevel || 1;
-        const foundZoomLevel = this.zoomLevels.get(this.zoomLevel);
-        if (!foundZoomLevel) {
-            return false;
-        }
-        const vb = foundZoomLevel.viewBox;
-        if (this.canZoom) {
-            this.isZooming = true;
-            this.canZoom = false;
-            setTimeout(() => {
-                this.isZooming = false;
-                this.canZoom = true;
-            }, 700);
-            const vbNew = new ViewBox(mapObject.svgPoint.x - vb.width / 2, mapObject.svgPoint.y - vb.height / 2, vb.width, vb.height);
-            this.setViewBox(vbNew);
-            this._scale = foundZoomLevel._scale;
-            return true;
-        }
-        return false;
+        const convertedObjects = !Array.isArray(mapObjects) ? [mapObjects] : mapObjects;
+        const bbox = this.getGroupBBox(convertedObjects);
+        return this.fitViewBox(bbox, zoomToLevel);
     }
     getGroupBBox(mapObjects) {
         let _bbox, bbox;
@@ -2894,6 +2812,13 @@ class MapSVGMap {
     zoomToRegion(region, zoomToLevel) {
         this.fitViewBox(region.getBBox(), zoomToLevel);
         return true;
+    }
+    zoomToMarkerOrCluster(mapObject, zoomToLevel) {
+        this.zoomLevel = zoomToLevel || 1;
+        const vb = this.zoomLevels.get(this.zoomLevel).viewBox;
+        const newViewBox = new ViewBox(mapObject.svgPoint.x - vb.width / 2, mapObject.svgPoint.y - vb.height / 2, vb.width, vb.height);
+        this.setViewBox(newViewBox);
+        this._scale = this.zoomLevels.get(this.zoomLevel)._scale;
     }
     centerOn(region, yShift) {
         if (this.options.googleMaps.on) {
@@ -3193,7 +3118,7 @@ class MapSVGMap {
     }
     scrollEnd(e, mapsvg, noClick) {
         setTimeout(() => {
-            this.enableAnimation();
+            this.enableTransitions();
             this.scrollStarted = false;
             this.isScrolling = false;
         }, 100);
@@ -3527,7 +3452,7 @@ class MapSVGMap {
             previousMapsIds.pop();
         }
         let showPreviousMapButton;
-        if (this.options.actions.region.click.showAnotherMapContainerId !== "undefined") {
+        if (this.options.actions.region.click.region.showAnotherMapContainerId !== "undefined") {
             showPreviousMapButton = false;
         }
         else {
@@ -3813,8 +3738,7 @@ class MapSVGMap {
     }
     setMarkerImagesDependency() {
         this.locationField = this.objectsRepository.schema.getFieldByType("location");
-        if (this.locationField &&
-            this.locationField.markersByFieldEnabled &&
+        if (this.locationField.markersByFieldEnabled &&
             this.locationField.markerField &&
             Object.values(this.locationField.markersByField).length > 0) {
             this.setMarkersByField = true;
@@ -3828,12 +3752,6 @@ class MapSVGMap {
         if (this.setMarkersByField) {
             if (typeof fieldValueOrObject === "object") {
                 fieldValue = fieldValueOrObject[this.locationField.markerField];
-                if (this.locationField.markerField === "regions") {
-                    fieldValue = fieldValue[0] && fieldValue[0].id;
-                }
-                else if (typeof fieldValue === "object" && fieldValue.length) {
-                    fieldValue = fieldValue[0].value;
-                }
             }
             else {
                 fieldValue = fieldValueOrObject;
@@ -3842,8 +3760,8 @@ class MapSVGMap {
                 return this.locationField.markersByField[fieldValue];
             }
         }
-        return location && location.imagePath
-            ? location.imagePath
+        return location && location.img
+            ? location.img
             : this.options.defaultMarkerImage
                 ? this.options.defaultMarkerImage
                 : MapSVG.urls.root + "markers/_pin_default.png";
@@ -4056,8 +3974,9 @@ class MapSVGMap {
         const _this = this;
         $(_this.containers.map).off(".common.mapsvg");
         $(_this.containers.scrollpane).off(".common.mapsvg");
-        $(document).off(".scroll.mapsvg");
-        $(document).off(".scrollInit.mapsvg");
+        $(document).off("keydown.scroll.mapsvg");
+        $(document).off("mousemove.scrollInit.mapsvg");
+        $(document).off("mouseup.scrollInit.mapsvg");
         if (_this.editMarkers.on) {
             $(_this.containers.map).on("touchstart.common.mapsvg mousedown.common.mapsvg", ".mapsvg-marker", function (e) {
                 e.originalEvent.preventDefault();
@@ -4090,8 +4009,7 @@ class MapSVGMap {
         }
         if (_this.options.scroll.spacebar) {
             $(document).on("keydown.scroll.mapsvg", function (e) {
-                if (!(document.activeElement.tagName === "INPUT" &&
-                    $(document.activeElement).attr("type") === "text") &&
+                if (document.activeElement.tagName !== "INPUT" &&
                     !_this.isScrolling &&
                     e.keyCode == 32) {
                     e.preventDefault();
@@ -4257,11 +4175,6 @@ class MapSVGMap {
                 }
             });
         }
-        else {
-            this.markers.forEach((marker) => {
-                marker.setLabel("");
-            });
-        }
     }
     addLayer(name) {
         this.layers[name] = $('<div class="mapsvg-layer mapsvg-layer-' + name + '"></div>')[0];
@@ -4307,9 +4220,6 @@ class MapSVGMap {
             const elem = element;
             if ($(elem).closest("defs").length)
                 return;
-            if (elem.getAttribute("data-stroke-width")) {
-                elem.style["stroke-width"] = elem.getAttribute("data-stroke-width");
-            }
             if (elem.getAttribute("id")) {
                 if (!this.options.regionPrefix ||
                     (this.options.regionPrefix &&
@@ -4332,17 +4242,8 @@ class MapSVGMap {
             }
             else {
                 if (this.options.filters.filteredRegionsStatus ||
-                    this.options.filters.filteredRegionsStatus === 0 ||
-                    (this.options.menu.source === "regions" &&
-                        this.options.menu.filterout &&
-                        this.options.menu.filterout.field === "status" &&
-                        this.options.menu.filterout.val) ||
-                    this.options.menu.filterout.val === 0) {
-                    const status = this.options.filters.filteredRegionsStatus ||
-                        this.options.filters.filteredRegionsStatus === 0
-                        ? this.options.filters.filteredRegionsStatus
-                        : this.options.menu.filterout.val;
-                    region.setStatus(status);
+                    this.options.filters.filteredRegionsStatus === 0) {
+                    region.setStatus(this.options.filters.filteredRegionsStatus);
                 }
             }
         });
@@ -4357,30 +4258,21 @@ class MapSVGMap {
     fixMarkersWorldScreen() {
         if (this.googleMaps.map)
             setTimeout(() => {
-                const markers = { left: 0, right: 0, leftOut: 0, rightOut: 0 };
+                const markers = { left: 0, right: 0 };
                 if (this.markers.length > 1) {
                     this.markers.forEach((m) => {
-                        if ($(m.element).offset().left <
+                        if (m.node.offset().left <
                             $(this.containers.map).offset().left +
                                 this.containers.map.clientWidth / 2) {
                             markers.left++;
-                            if ($(m.element).offset().left < $(this.containers.map).offset().left) {
-                                markers.leftOut++;
-                            }
                         }
                         else {
                             markers.right++;
-                            if ($(m.element).offset().left >
-                                $(this.containers.map).offset().left +
-                                    this.containers.map.clientWidth) {
-                                markers.rightOut++;
-                            }
                         }
                     });
-                    if ((markers.left === 0 && markers.rightOut) ||
-                        (markers.right === 0 && markers.leftOut)) {
+                    if (markers.left === 0 || markers.right === 0) {
                         const k = markers.left === 0 ? 1 : -1;
-                        const ww = (this.svgDefault.viewBox.width / this.converter.mapLonDelta) *
+                        const ww = (this.svgDefault.viewBox.width / this.mapLonDelta) *
                             360 *
                             this.getScale();
                         this.googleMaps.map.panBy(k * ww, 0);
@@ -4446,14 +4338,12 @@ class MapSVGMap {
         }
     }
     init() {
-        MapSVG.addInstance(this);
         if (this.options.source === "") {
             throw new Error("MapSVG: please provide SVG file source.");
         }
-        this.disableAnimation();
+        this.disableCssAnimations();
         this.setEvents(this.options.events);
         this.events.trigger("beforeLoad");
-        this.loadGoogleMapsAPI(() => { }, () => { });
         this.containers.map.classList.add("mapsvg");
         this.setCss();
         if (this.options.colors && this.options.colors.background) {
@@ -4516,7 +4406,6 @@ class MapSVGMap {
         svgTag.removeAttr("width");
         svgTag.removeAttr("height");
         $(this.containers.scrollpane).append(svgTag);
-        this.setStrokes();
         this.reloadRegions();
         this.setSize(this.options.width, this.options.height, this.options.responsive);
         if (this.options.disableAll) {
@@ -4543,7 +4432,6 @@ class MapSVGMap {
             this.showLoadingMessage();
         });
         this.objectsRepository.events.on("loaded", () => {
-            this.setGlobalDistanceFilter();
             this.fitOnDataLoadDone = false;
             this.addLocations();
             this.fixMarkersWorldScreen();
@@ -4562,7 +4450,7 @@ class MapSVGMap {
                 this.controllers.filters.setFiltersCounter();
             }
             this.hideLoadingMessage();
-            this.events.trigger("databaseLoaded");
+            this.events.trigger("dataLoaded");
             this.updateFiltersState();
             this.setChoropleth();
         });
@@ -4616,45 +4504,31 @@ class MapSVGMap {
             }
         }
         this.setEventHandlers();
-        this.afterLoadBlockers--;
         if (!this.id) {
             this.finalizeMapLoading();
             return;
         }
-        if (!this.options.data_regions) {
-            this.regionsRepository.find().done((data) => {
-                this.afterLoadBlockers--;
-                this.finalizeMapLoading();
+        if (!this.options.data_regions || !this.options.data_objects) {
+            this.regionsRepository.find({ withSchema: true }).done((regions) => {
+                if (this.options.database.loadOnStart || this.editMode) {
+                    this.objectsRepository.find({ withSchema: true }).done((data) => {
+                        this.finalizeMapLoading();
+                    });
+                }
+                else {
+                    this.finalizeMapLoading();
+                }
             });
         }
         else {
             this.regionsRepository.loadDataFromResponse(this.options.data_regions);
-            this.afterLoadBlockers--;
-        }
-        if (!this.options.data_objects) {
-            if (this.options.database.loadOnStart || this.editMode) {
-                this.objectsRepository.find().done((data) => {
-                    this.afterLoadBlockers--;
-                    this.finalizeMapLoading();
-                });
-            }
-            else {
-                this.afterLoadBlockers--;
-                this.finalizeMapLoading();
-            }
-        }
-        else {
             if (this.editMode || this.options.database.loadOnStart) {
                 this.objectsRepository.loadDataFromResponse(this.options.data_objects);
-                this.afterLoadBlockers--;
-            }
-            else {
-                this.afterLoadBlockers--;
             }
             delete this.options.data_regions;
             delete this.options.data_objects;
-            this.finalizeMapLoading();
         }
+        this.finalizeMapLoading();
     }
     getGeoViewBoxFromSvgTag(svgTag) {
         const geo = $(svgTag).attr("mapsvg:geoViewBox") || $(svgTag).attr("mapsvg:geoviewbox");
@@ -4733,10 +4607,10 @@ class MapSVGMap {
     showLoadingMessage() {
         $(this.containers.loading).show();
     }
-    disableAnimation() {
+    disableCssAnimations() {
         this.containers.map.classList.add("no-transitions");
     }
-    enableAnimation() {
+    enableTransitions() {
         $(this.containers.map).removeClass("no-transitions");
     }
     loadExtensions() {
@@ -4748,21 +4622,24 @@ class MapSVGMap {
         }
     }
     finalizeMapLoading() {
-        if (this.afterLoadBlockers > 0 || this.loaded) {
+        if (this.options.googleMaps.on && !this.googleMaps.map) {
+            this.events.on("googleMapsLoaded", () => {
+                this.finalizeMapLoading();
+            });
             return;
         }
         this.selectRegionByIdFromUrl();
         setTimeout(() => {
             this.movingItemsAdjustScreenPosition();
-            this.adjustStrokes();
+            this.mapAdjustStrokes();
             setTimeout(() => {
                 this.hideLoadingMessage();
                 $(this.containers.loading).find(".mapsvg-loading-text").hide();
-                this.enableAnimation();
+                this.enableTransitions();
             }, 200);
         }, 100);
-        this.loaded = true;
         this.events.trigger("afterLoad");
+        MapSVG.addInstance(this);
     }
     selectRegionByIdFromUrl() {
         const match = RegExp("[?&]mapsvg_select=([^&]*)").exec(window.location.search);

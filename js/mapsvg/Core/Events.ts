@@ -20,16 +20,16 @@ export class Events {
             callbackFunction = callbackOrObjectType;
         }
 
-        // let duplicatedEvent = false;
-        // this.events[event].forEach(function (existingCallback) {
-        //     if (existingCallback.toString() === callbackFunction.toString()) {
-        //         duplicatedEvent = true;
-        //     }
-        // });
-        //
-        // if (duplicatedEvent === false) {
-        this.events[event].push(callbackFunction);
-        // }
+        let duplicatedEvent = false;
+        this.events[event].forEach(function (existingCallback) {
+            if (existingCallback.toString() === callbackFunction.toString()) {
+                duplicatedEvent = true;
+            }
+        });
+
+        if (duplicatedEvent === false) {
+            this.events[event].push(callbackFunction);
+        }
 
         return this;
     }

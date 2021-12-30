@@ -5,15 +5,6 @@
     position : relative;
     overflow: hidden;
 }
-.mapsvg-wrap-all, .mapsvg-wrap-all * {
-    box-sizing: border-box;
-}
-.mapsvg-wrap {
-    position: relative;
-    box-sizing: border-box;
-    max-width: 100% !important;
-    margin: 0 !important;;
-}
 .mapsvg-wrap *, .mapsvg * {
     outline: none !important;
     touch-action: manipulation;
@@ -48,7 +39,6 @@
     -webkit-transform-origin: 0% 0%;
 }
 
-
 /* SMOOTH TRANSITIONS */
 .mapsvg.no-transitions *, .no-transitions
 {
@@ -73,13 +63,6 @@
     -ms-transition: transform .40s;
     -o-transition: transform .40s;
     transition: transform .40s;
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-}
-.mapsvg-scrollpane-wrap {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -444,7 +427,6 @@
     line-height: 27px;
     border-radius: 5px;
     font-size: 13px;
-    margin-right: 4px;
     font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -1223,7 +1205,4 @@ iframe.mapsvg-iframe-post
 .mapsvg-gauge table td {
     padding: 2px 7px;
     border: 0 !important;
-}
-.form-text:empty {
-    display: none;
 }

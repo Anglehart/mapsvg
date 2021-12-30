@@ -86,9 +86,10 @@
             schema.fields.forEach(function (obj) {
                 _fields.push(obj.name);
                 if (
-                    (obj.type === "select" && !obj.multiselect) ||
+                    obj.type === "select" ||
                     obj.type === "radio" ||
-                    obj.type === "status"
+                    obj.type === "status" ||
+                    obj.type === "region"
                 ) {
                     _fieldsSelect.push(obj.name);
                 }

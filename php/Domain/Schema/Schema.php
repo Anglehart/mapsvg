@@ -90,7 +90,7 @@ class Schema extends Model {
 		}
 		$this->fields = array();
 
-		if($fields) foreach($fields as $key=>$field){
+		foreach($fields as $key=>$field){
 			$this->fields[$key] = $this->formatField((object)$field);
 		}
 
@@ -130,11 +130,6 @@ class Schema extends Model {
 
 	public function addField($field, $prepend = false){
 		$this->setPrevFields();
-
-		if(!is_object($field)){
-            $field = json_decode(json_encode($field), FALSE);
-        }
-
 		if($prepend){
 			$this->fields = array_merge([$field], $this->fields);
 		} else {
@@ -154,13 +149,11 @@ class Schema extends Model {
 
 	public function getField($fieldName){
 		$resultField = false;
-		if(!empty($this->fields)){
-            foreach($this->fields as $field){
-                if($field->name === $fieldName){
-                    $resultField = $field;
-                }
-            }
-        }
+		foreach($this->fields as $field){
+			if($field->name === $fieldName){
+				$resultField = $field;
+			}
+		}
 		return $resultField;
 	}
 
@@ -210,10 +203,6 @@ class Schema extends Model {
 				if($onlyFulltext === false){
 					$searchable_fields[] = $field;
 				} else {
-				    // Don't add incompatible column types to fulltext index
-				    if($field["db_type"] !== "text" && $field["db_type"] !== "longtext" && strpos($field["db_type"], "varchar") === false){
-				        continue;
-                    }
 					if($field['type']==='text'){
 						if(!isset($field['searchType']) || $field['searchType'] === 'fulltext'){
 							$searchable_fields[] = $field;

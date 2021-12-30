@@ -18,12 +18,7 @@ export class RadioFormElement extends FormElement {
         });
     }
     setInputValue(value) {
-        if (value === null) {
-            this.$radios.prop("checked", false);
-        }
-        else {
-            this.inputs.radios.value = value;
-        }
+        this.inputs.radios.value = value;
     }
 }
 //# sourceMappingURL=RadioFormElement.js.map

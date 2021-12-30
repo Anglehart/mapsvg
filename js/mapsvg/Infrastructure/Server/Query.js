@@ -77,7 +77,7 @@ export class Query {
         this.filters[field] = value;
     }
     hasFilters() {
-        return Object.keys(this.filters).length > 0 || this.search.length > 0;
+        return Object.keys(this.filters).length > 0;
     }
     removeFilter(fieldName) {
         this.filters[fieldName] = null;

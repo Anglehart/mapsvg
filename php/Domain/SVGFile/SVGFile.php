@@ -57,8 +57,8 @@ class SVGFile extends File {
 	}
 
 	public function lastChanged(){
-		if(file_exists($this->serverPath)){
-			return filemtime($this->serverPath);
+		if(file_exists($this->pathFull)){
+			return filemtime($this->pathFull);
 		} else {
 			return 0;
 		}

@@ -6,7 +6,7 @@ class Converter {
     private geoViewBox: GeoViewBox;
     private defViewBox: ViewBox;
     private viewBox: ViewBox;
-    public mapLonDelta: number;
+    private mapLonDelta: number;
     private mapLatBottomDegree: number;
     private worldMapRadius: number;
     private worldMapWidth: number;
@@ -40,7 +40,7 @@ class Converter {
         }
     }
 
-    setGeoViewBox(geoViewBox: GeoViewBox): void {
+    setGeoViewBox(geoViewBox: GeoViewBox) {
         this.geoViewBox = geoViewBox;
         this.mapLonDelta = this.geoViewBox.ne.lng - this.geoViewBox.sw.lng;
         this.mapLatBottomDegree = (this.geoViewBox.sw.lat * Math.PI) / 180;

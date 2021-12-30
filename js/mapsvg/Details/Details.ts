@@ -44,7 +44,7 @@ export class DetailsController extends Controller {
             !this.mobileCloseBtn
         ) {
             this.mobileCloseBtn = $(
-                '<button class="mapsvg-mobile-modal-close">' +
+                '<button class="mapsvg-mobile-modal-close mapsvg-btn">' +
                     _this.mapsvg.options.mobileView.labelClose +
                     "</button>"
             )[0];
@@ -58,15 +58,14 @@ export class DetailsController extends Controller {
      */
     setEventHandlers() {
         const _this = this;
-        $(this.containers.toolbar).on("click touchend", ".mapsvg-popover-close", function (e) {
-            e.stopPropagation();
-            _this.destroy();
-            _this.events.trigger("closed", _this, [_this]);
-        });
-        $(this.containers.view).on("click touchend", ".mapsvg-mobile-modal-close", function (e) {
-            e.stopPropagation();
-            _this.destroy();
-            _this.events.trigger("closed", _this, [_this]);
-        });
+        $(this.containers.toolbar).on(
+            "click",
+            ".mapsvg-popover-close, .mapsvg-mobile-modal-close",
+            function (e) {
+                e.stopPropagation();
+                _this.destroy();
+                _this.events.trigger("closed", _this, [_this]);
+            }
+        );
     }
 }

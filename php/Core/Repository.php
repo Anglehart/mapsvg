@@ -31,9 +31,7 @@ class Repository implements JsonSerializable {
 	/* @var boolean Whether output JSON data should be provided with the Schema */
 	private $renderJsonWithSchema = false;
 
-	public $geocodingErrors;
-
-	public function __construct($tableName = null)
+	public function __construct(string $tableName = null)
 	{
 		$this->db = Database::get();
 
@@ -41,12 +39,9 @@ class Repository implements JsonSerializable {
 			$this->id = $tableName;
 			$this->loadSchema();
 		} else {
-
 			$this->loadSchema(static::getDefaultSchema());
 			$this->id = $this->schema->name;
 		}
-
-		$this->geocodingErrors = [];
 	}
 
 	/**
@@ -54,7 +49,7 @@ class Repository implements JsonSerializable {
 	 * @param array $params
 	 * @return $this
 	 */
-	public function build($params)
+	public function build(array $params)
 	{
 		foreach($params as $paramName => $options){
 			$methodName = 'set'.ucfirst($paramName);
@@ -172,7 +167,7 @@ class Repository implements JsonSerializable {
 	 * Loads Entity table schema
 	 * @param array|null $schema
 	 */
-	public function loadSchema($schema = null)
+	private function loadSchema(array $schema = null)
 	{
 
 		if($schema){
@@ -236,11 +231,7 @@ class Repository implements JsonSerializable {
 			$data = json_decode($data, true);
 		}
 
-		if(!is_object($data)){
-            $object    = $this->newObject($data);
-        } else {
-            $object    = $data;
-        }
+		$object    = $this->newObject($data);
 
 		$dataForDB = $this->encodeParams($object->getData());
 
@@ -258,6 +249,8 @@ class Repository implements JsonSerializable {
 	public function findById($id)
 	{
 		$data = $this->db->get_row("SELECT * FROM `" . $this->getTableName() . "` WHERE id='" . $id . "'");
+//		var_dump("SELECT * FROM `" . $this->getTableName() . "` WHERE id='" . $id . "'");
+//		die();
 
 		if($data){
 			$data = $this->decodeParams((array)$data);
@@ -297,6 +290,13 @@ class Repository implements JsonSerializable {
 		$filter_regions = '';
 
 		$start = ($query->page - 1) * $query->perpage;
+
+//		$filters   = isset($query['filters']) ? $query['filters'] : null;
+//		$filterout = isset($query['filterout']) ? $query['filterout'] : null;
+//		$search    = isset($filters['search']) ? $filters['search'] : null;
+//		if(isset($filters['search'])){
+//			unset($filters['search']);
+//		}
 		$search_fallback = isset($query->searchFallback) ? $query->searchFallback === true : false;
 
 		if(empty($this->schema)){
@@ -305,6 +305,9 @@ class Repository implements JsonSerializable {
 			    return false;
             }
 		}
+
+		$fields            = array();
+		$fields_dict       = array();
 
 		$select_distance = '';
 		$having = '';
@@ -353,16 +356,11 @@ class Repository implements JsonSerializable {
 						}
 
 					} else {
-						if(isset($field->multiselect) && $field->multiselect === true){
+						if(isset($fields_dict[$fieldName]['multiselect']) && $fields_dict[$fieldName]['multiselect'] === true){
+							//                            $filters_sql[] = 'MATCH (`'.$key.'`) AGAINST (\''.esc_sql($fields_dict[$key]['optionsDict']->{$value}).'*\' IN BOOLEAN MODE)';
 							if(is_array($fieldValue)){
 								foreach($fieldValue as $index=>$v){
-								    if(is_array($v) && isset($v["label"]) && isset($v["value"])){
-                                        $label = $v["label"];
-                                        $value = $v["value"];
-                                    } else {
-                                        $value = $v;
-                                    }
-									$fieldValue[$index] = '`'.$fieldName.'` LIKE \'%"'.esc_sql($value).'"%\'';
+									$fieldValue[$index] = '`'.$fieldName.'` LIKE \'%"'.esc_sql($v).'"%\'';
 								}
 								$filters_sql[] = "(".implode(' AND ', $fieldValue).")";
 							} else {
@@ -370,14 +368,7 @@ class Repository implements JsonSerializable {
 							}
 						}else{
 							if(is_array($fieldValue)){
-							    if(!empty($fieldValue[0]) && is_array($fieldValue[0])){
-                                    $fieldValue = array_map(function($elem){
-                                        return $elem["value"];
-                                    }, $fieldValue);
-                                    $values = '\''.implode('\',\'', $fieldValue).'\'';
-                                } else {
-                                    $values = '\''.implode('\',\'', $fieldValue).'\'';
-                                }
+								$values = '\''.implode('\',\'', $fieldValue).'\'';
 								$filters_sql[] = '`'.$fieldName.'` IN ('.$values.')';
 							} else {
 								$filters_sql[] = '`'.$fieldName.'`=\''.esc_sql($fieldValue).'\'';
@@ -472,7 +463,7 @@ class Repository implements JsonSerializable {
 					$sortArray[] = '`'.$group['field'].'` '.$group['order'];
 				}
 			}
-			if(isset($query->filters['distance']) && !empty($query->filters['distance']) && !$distanceSortPresent){
+			if(isset($filters['distance']) && !empty($filters['distance']) && !$distanceSortPresent){
 				array_unshift($sortArray, '`distance` ASC');
 			}
 			$sort = implode(',',$sortArray);
@@ -480,7 +471,11 @@ class Repository implements JsonSerializable {
 			$sortBy  = 'id';
 			$sortDir = 'DESC';
 			if(isset($query->sortBy) && !empty($query->sortBy)){
-				$sortBy = '`'.$query->sortBy.'`';
+				$sortBy = $this->getSort($query->sortBy);
+				$sortBy = '`'.$sortBy.'`';
+				if(isset($filters['distance'])){
+					$sortBy = 'distance ASC, '.$sortBy.' ';
+				}
 			}
 			if(isset($query->sortDir) && !empty($query->sortDir)){
 				if(in_array(strtolower($query->sortDir), array('desc','asc'))){
@@ -488,11 +483,6 @@ class Repository implements JsonSerializable {
 				}
 			}
 			$sort = $sortBy.' '.$sortDir;
-
-            if(isset($query->filters['distance'])){
-                $sort = 'distance ASC, '.$sort.' ';
-            }
-
 		}
 
 		$fields = $query->fields ? '`'.implode('`,`',$query->fields).'`' : '*';
@@ -555,7 +545,7 @@ class Repository implements JsonSerializable {
 
     /**
      * Static method that creates a new table
-     * @param string|array|Schema $schemaOrName
+     * @param string|array $schemaOrName
      * @return string
      */
     public static function createRepository($schemaOrName)
@@ -565,7 +555,7 @@ class Repository implements JsonSerializable {
         if(is_string($schemaOrName)){
             $schemaData = static::getDefaultSchema();
             $schemaData['name'] = $schemaOrName;
-        } elseif(is_array($schemaOrName) || is_object($schemaOrName)){
+        } elseif(is_array($schemaOrName)){
             $schemaData = $schemaOrName;
         }
 
@@ -586,25 +576,6 @@ class Repository implements JsonSerializable {
         return (bool)$table_exists;
     }
 
-    /**
-     * Checks whether a table exists
-     * @param string $name
-     * @return boolean
-     */
-    public function hasTable(){
-        $table_exists = $this->db->get_var("SHOW TABLES LIKE '".$this->db->mapsvg_prefix.$this->schema->name."'");
-        return (bool)$table_exists;
-    }
-
-    /**
-     * Checks whether a schema is loaded
-     * @param string $name
-     * @return boolean
-     */
-    public function hasSchema(){
-        return isset($this->schema) && is_object($this->schema) && $this->schema->id;
-    }
-
 
 	/**
 	 * Deletes a table
@@ -619,10 +590,9 @@ class Repository implements JsonSerializable {
 	/**
 	 * Import CSV data to regions / database
 	 */
-	public function import($data, $convertLatlngToAddress = false){
+	public function import(array $data, $convertLatlngToAddress = false){
 
 		$_data  = array();
-		$returnData = array();
 		$table = $this->getTableName();
 
 		foreach($data as $index => $object){
@@ -671,12 +641,9 @@ class Repository implements JsonSerializable {
 	public function encodeParams($data, $convertLatLngToAddress = false)
 	{
 
-        $this->geocodingErrors = [];
-
-		if(is_object($data) && method_exists($data, 'getData')){
+		if(method_exists($data, 'getData')){
 			$data = $data->getData();
 		}
-
 		if(empty($this->schema)){
 			$this->loadSchema();
 		}
@@ -827,16 +794,39 @@ class Repository implements JsonSerializable {
 
 											break;
 										case 'ZERO_RESULTS':
+											break;
 										case 'OVER_DAILY_LIMIT':
+											// TODO notify user that:
+											// The API key is missing or invalid.
+											// Billing has not been enabled on your account.
+											// A self-imposed usage cap has been exceeded.
+											// The provided method of payment is no longer valid (for example, a credit card has expired).
+											// See the Maps FAQ to learn how to fix this.
+											break;
 										case 'OVER_QUERY_LIMIT':
+											// TODO
+											// Tell user to retry tomorrow (notify that some locations where not converted)
+											break;
 										case 'REQUEST_DENIED':
+											// TODO add a field location_error?
+											// To mark which locations can still be converted
+											break;
 										case 'INVALID_REQUEST':
+											// TODO add a field location_error?
+											// To mark which locations can still be converted
+											break;
 										case 'UNKNOWN_ERROR':
+											// TODO add a field location_error?
+											// To mark which locations can still be converted
+											break;
 										case 'CONNECTION_ERROR':
+											// TODO add a field location_error?
+											// Don't try to import more locations
+											break;
 										case 'NO_API_KEY':
-										    if(count($this->geocodingErrors)<5){
-                                                $this->geocodingErrors[] =  $response['status'];
-                                            }
+											// TODO add a field location_error?
+											// Don't try to import more locations
+											break;
 										default: null;
 											break;
 									}
@@ -864,7 +854,7 @@ class Repository implements JsonSerializable {
 		return $formattedData;
 	}
 
-	public function decodeParams($data)
+	public function decodeParams(array $data)
 	{
 		if(empty($this->schema)){
 			$this->loadSchema();
@@ -910,12 +900,10 @@ class Repository implements JsonSerializable {
 						$data_formatted['post'] = get_post((int)$data['post']);
 						if($data_formatted['post']){
 							$data_formatted['post']->id = $data_formatted['post']->ID;
-//                            $data_formatted['post']->post_content = wpautop($data_formatted['post']->post_content);
-                            $data_formatted['post']->post_content = apply_filters( 'the_content', do_blocks( preg_replace( '/\[mapsvg.*?\]/', '', $data_formatted['post']->post_content ) ) );
+							$data_formatted['post']->post_content = wpautop($data_formatted['post']->post_content);
 							$data_formatted['post']->url = get_permalink($data_formatted['post']);
-							$data_formatted['post']->image = get_the_post_thumbnail_url($data_formatted['post']->ID,'full');
 							if (function_exists('get_fields') ) {
-								$data_formatted['post']->acf = get_fields($data['post']);
+								$data_formatted['post']->acf = get_fields($data['post_id']);
 							}
 						}
 					}
@@ -975,7 +963,6 @@ class Repository implements JsonSerializable {
 		$dir = dirname($filename);
 
 		$schema = file_get_contents($dir.'/schema.json');
-
 		$schema = json_decode($schema, true);
 		return $schema;
 	}

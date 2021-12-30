@@ -71,11 +71,7 @@ export class SchemaRepository extends Repository {
         fieldsJsonString = fieldsJsonString.replace(/table/g, "!mapsvg-encoded-tbl");
         fieldsJsonString = fieldsJsonString.replace(/database/g, "!mapsvg-encoded-db");
         fieldsJsonString = fieldsJsonString.replace(/varchar/g, "!mapsvg-encoded-vc");
-        fieldsJsonString = fieldsJsonString.replace(/int\(11\)/g, "!mapsvg-encoded-int");
 
-        const back = JSON.parse(fieldsJsonString);
-        back.fields = JSON.stringify(_schema.fields);
-
-        return back;
+        return JSON.parse(fieldsJsonString);
     }
 }

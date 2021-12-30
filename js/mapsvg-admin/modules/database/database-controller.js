@@ -78,7 +78,6 @@
             delete _this.mapsvg.objectsRepository.query.filters[filterField];
             if (filterField === "search") {
                 $("#mapsvg-data-search").val("");
-                _this.mapsvg.objectsRepository.query.search = "";
             }
             _this.mapsvg.loadDataObjects();
             _this.setFilters();
@@ -152,9 +151,8 @@
         var _this = this;
         var filters = this.toolbarView.find(".mapsvg-toolbar-filters").empty();
         if (
-            _this.mapsvg.objectsRepository.query.search ||
-            (_this.mapsvg.objectsRepository.query.filters &&
-                Object.keys(_this.mapsvg.objectsRepository.query.filters).length > 0)
+            _this.mapsvg.objectsRepository.query.filters &&
+            Object.keys(_this.mapsvg.objectsRepository.query.filters).length > 0
         ) {
             for (var field_name in _this.mapsvg.objectsRepository.query.filters) {
                 var filterVals;
@@ -167,11 +165,7 @@
                     visibleFilterName = "search by address";
                     filterVals = "";
                 } else {
-                    let val = _this.mapsvg.objectsRepository.query.filters[field_name];
-                    if (typeof val === "object" && val[0] && val[0].value) {
-                        val = val.map((el) => el.label).join(", ");
-                    }
-                    filterVals = val;
+                    filterVals = _this.mapsvg.objectsRepository.query.filters[field_name];
                 }
                 filters.append(
                     '<div class="mapsvg-filter-tag">' +
@@ -180,13 +174,6 @@
                         ' <span class="mapsvg-filter-delete" data-filter="' +
                         field_name +
                         '">×</span></div>'
-                );
-            }
-            if (_this.mapsvg.objectsRepository.query.search) {
-                filters.append(
-                    '<div class="mapsvg-filter-tag">search: ' +
-                        _this.mapsvg.objectsRepository.query.search +
-                        ' <span class="mapsvg-filter-delete" data-filter="search">×</span></div>'
                 );
             }
             this.view.addClass("mapsvg-with-filter");

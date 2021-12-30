@@ -40,13 +40,10 @@ export class CheckboxesFormElement extends FormElement {
         });
     }
 
-    setInputValue(values: string[] | null): void {
-        if (values === null) {
-            $(this.domElements.main).find(`input`).prop("checked", false);
-        } else {
-            values.forEach((value: string) => {
-                $(this.domElements.main).find(`input[value="${value}"]`).prop("checked", true);
-            });
-        }
+    setInputValue(values: string[]): void {
+        // TODO Vyacheslav - проверить выставление значений после фикса фильтрации объектов по клику на регионе карты
+        values.forEach((value: string) => {
+            $(this.domElements.main).find(`input[value="${value}"]`).prop("checked", true);
+        });
     }
 }

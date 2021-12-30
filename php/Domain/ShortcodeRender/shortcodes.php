@@ -189,13 +189,7 @@ function mapsvg_add_jquery(){
 	//wp_enqueue_script('mapsvg-resize', MAPSVG_PLUGIN_URL . 'js/mapsvg/resize.js', array('jquery'), (MAPSVG_RAND?rand():''));
 }
 
-if(isset($_GET['mapsvg_shortcode_inline'])){
-    $shortcode = stripslashes($_REQUEST['mapsvg_shortcode_inline']);
-    echo do_shortcode( $shortcode );
-    exit;
-}
-
-if(isset($_GET['mapsvg_shortcode'])){
+if(isset($_GET['mapsvg_shortcode']) || isset($_GET['mapsvg_shortcode_inline'])){
 
 	add_action( 'wp_enqueue_scripts', 'mapsvg_add_jquery' );
 	add_action('template_redirect', 'mapsvg_blank_template');

@@ -3,7 +3,7 @@
         <div class="form-group mb-3 row">
             <label class="col-md-3 col-form-label">Visibility switches</label>
             <div class="col-md-9">
-       <div class=" form-switch form-switch-md">
+       <div class=" form-check form-switch form-switch-md">
                 <input type="checkbox" name="layersControl[on]" class="form-check-input mapsvg-toggle-visibility"
                        data-toggle-visibility="#mapsvg-layers-extra"
                        {{#if layersControl.on}}checked{{/if}} data-live="change">
@@ -34,7 +34,7 @@
             <div class="form-group mb-3 row">
                 <label class="col-md-3 col-form-label">Expanded on start</label>
                 <div class="col-md-9">
-                    <div class=" form-switch form-switch-md">
+                    <div class=" form-check form-switch form-switch-md">
                         <input type="checkbox" name="layersControl[expanded]" class="form-check-input"
                                {{#if layersControl.expanded}}checked{{/if}} data-live="change">
                     </div>

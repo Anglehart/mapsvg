@@ -4,10 +4,6 @@
     -ms-transition: transform .40s;
     -o-transition: transform .40s;
     transition: transform .40s;
-    box-sizing: border-box;
-}
-.mapsvg-popover * {
-    box-sizing: border-box;
 }
 .mapsvg-popover-close {
     position: absolute;

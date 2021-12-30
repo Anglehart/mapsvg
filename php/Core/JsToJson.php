@@ -14,7 +14,7 @@ class JsToJson
 	 * @param string $jsObjectString The JavaScript object
 	 * @return string
 	 */
-	public static function convertToJson($jsObjectString)
+	public static function convertToJson(string $jsObjectString)
 	{
 		$replacedStringsList = [];
 

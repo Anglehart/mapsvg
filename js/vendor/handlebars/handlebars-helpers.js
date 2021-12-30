@@ -141,12 +141,12 @@ Handlebars.registerHelper("getThumbs", function (v1, v2, options) {
 Handlebars.registerHelper("getMarkerImage", function (v1, v2, options) {
     var location = v1[v2];
 
-    if (!location || !location.markerImagePath) {
+    if (!location || !location.imagePath) {
         return "";
     }
     return new Handlebars.SafeString(
         '<img src="' +
-            location.markerImagePath +
+            location.imagePath +
             '" class="mapsvg-marker-image"/> ' +
             (location.address && location.address.formatted ? location.address.formatted : "")
     );
@@ -202,15 +202,15 @@ function deg2rad(deg) {
 Handlebars.registerHelper("distanceFrom", function (location) {
     if (MapSVG.distanceSearch) {
         var distance = getDistanceFromLatLonInKm(
-            location.geoPoint.lat,
-            location.geoPoint.lng,
-            MapSVG.distanceSearch.geoPoint.lat,
-            MapSVG.distanceSearch.geoPoint.lng
+            location.lat,
+            location.lng,
+            MapSVG.distanceSearch.latlng.lat,
+            MapSVG.distanceSearch.latlng.lng
         );
         if (MapSVG.distanceSearch.units === "mi") {
             distance = distance * 0.62137;
         }
-        return distance.toFixed(2) + " " + MapSVG.distanceSearch.units;
+        return distance.toFixed(2) + " " + MapSVG.distanceSearch.unitsLabel;
     } else {
         return "";
     }
@@ -218,15 +218,15 @@ Handlebars.registerHelper("distanceFrom", function (location) {
 Handlebars.registerHelper("distanceTo", function (location) {
     if (MapSVG.distanceSearch) {
         var distance = getDistanceFromLatLonInKm(
-            location.geoPoint.lat,
-            location.geoPoint.lng,
-            MapSVG.distanceSearch.geoPoint.lat,
-            MapSVG.distanceSearch.geoPoint.lng
+            location.lat,
+            location.lng,
+            MapSVG.distanceSearch.latlng.lat,
+            MapSVG.distanceSearch.latlng.lng
         );
         if (MapSVG.distanceSearch.units === "mi") {
             distance = distance * 0.62137;
         }
-        return distance.toFixed(2) + " " + MapSVG.distanceSearch.units;
+        return distance.toFixed(2) + " " + MapSVG.distanceSearch.unitsLabel;
     } else {
         return "";
     }
@@ -312,11 +312,10 @@ Handlebars.registerHelper("shortcode", function (shortcode) {
         };
         window.MapSVG.resizeIframe();
     }
-
-    var url = mapsvg_paths.home + "/mapsvg_sc?mapsvg_shortcode=" + encodeURI(shortcode);
-
     return new Handlebars.SafeString(
-        '<iframe width="100%" class="mapsvg-iframe-shortcode"  src="' + url + '"></iframe>'
+        '<iframe width="100%" class="mapsvg-iframe-shortcode"  src="/mapsvg_sc?mapsvg_shortcode=' +
+            encodeURI(shortcode) +
+            '"></iframe>'
     );
 });
 
@@ -331,20 +330,10 @@ Handlebars.registerHelper("shortcode_inline", function (shortcode) {
 
     var id = "mapsvg-inline-shortcode-" + ++window.MapSVG.shortcodeCounter;
     var shortcodeBlock = '<span class="mapsvg-inline-shortcode" id="' + id + '"></span>';
-    var url = mapsvg_paths.home + "/mapsvg_sc";
-    jQuery
-        .get(mapsvg_paths.api + "shortcodes/" + shortcode, function (data) {
-            jQuery("#" + id).replaceWith(data);
-        })
-        .done(() => {
-            console.log("done");
-        })
-        .fail(() => {
-            console.log("fail");
-        })
-        .always(() => {
-            console.log("always");
-        });
+
+    jQuery.get(ajaxurl, { action: "mapsvg_shortcode", shortcode: shortcode }, function (data) {
+        jQuery("#" + id).replaceWith(data);
+    });
 
     return new Handlebars.SafeString(shortcodeBlock);
 });

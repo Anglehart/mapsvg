@@ -92,7 +92,7 @@
 
         $("#mapsvg-btn-data-add").on("click", function (e) {
             e.preventDefault();
-            _this.showNewObjectForm();
+            _this.editDataObject();
         });
 
         this.view
@@ -115,10 +115,6 @@
             });
     };
 
-    MapSVGAdminDatabaseListController.prototype.showNewObjectForm = function () {
-        let newEmptyObject = new _mapsvg.customObject({}, this.database.schema);
-        this.editDataObject(newEmptyObject);
-    };
     MapSVGAdminDatabaseListController.prototype.getTemplateData = function () {
         var _this = this;
         var data = {
@@ -183,11 +179,11 @@
         cont.html(pager);
     };
 
-    MapSVGAdminDatabaseListController.prototype.addDataRow = function (objectInstance) {
+    MapSVGAdminDatabaseListController.prototype.addDataRow = function (obj) {
         var _this = this;
         var d = {
             fields: _this.database.getSchema().getColumns({ visible: true }),
-            params: objectInstance.getData(),
+            params: obj,
         };
         for (var i in d.fields) {
             if (d.fields[i].type == "region") {
@@ -277,25 +273,27 @@
             });
         }
     };
-    MapSVGAdminDatabaseListController.prototype.createMarkerFromObject = function (object) {
-        if (object && object.location) {
-            var markerCopy = new _mapsvg.marker({
-                location: object.location,
+    MapSVGAdminDatabaseListController.prototype.createLocationCopy = function (rawObjectData) {
+        let locationTemp, locationField, locationFieldName;
+        locationField = this.database.getSchema().getFieldByType("location");
+        if (locationField && rawObjectData[locationField.name]) {
+            locationTemp = new mapsvg.location(rawObjectData[locationField.name]);
+            let markerCopy = new mapsvg.marker({
+                location: locationTemp,
                 mapsvg: this.mapsvg,
-                object: object,
             });
             this.mapsvg.markerAdd(markerCopy);
-            return markerCopy;
+            return locationTemp;
         }
     };
-    MapSVGAdminDatabaseListController.prototype.createMarkerCopy2 = function (object) {
+    MapSVGAdminDatabaseListController.prototype.createMarkerCopy = function (object) {
         let locationTemp, locationField, locationFieldName;
         locationField = this.database.getSchema().getFieldByType("location");
         if (locationField) {
             locationFieldName = locationField.name;
-            locationTemp = new _mapsvg.location(object[locationFieldName].getData());
+            locationTemp = new mapsvg.location(object[locationFieldName].getData());
         }
-        let markerCopy = new _mapsvg.marker({
+        let markerCopy = new mapsvg.marker({
             location: locationTemp,
             mapsvg: this.mapsvg,
         });
@@ -309,16 +307,15 @@
         scrollTo,
         closeOnSave
     ) {
+        object = object || {};
         let newRecord;
+
         if (typeof object == "string" || typeof object == "number") {
             object = this.database.getLoadedObject(object);
             newRecord = false;
         } else {
             newRecord = true;
         }
-
-        const objectCopy = object.clone();
-        this.objectCopy = objectCopy;
 
         closeOnSave = closeOnSave !== true ? (newRecord ? false : true) : true;
 
@@ -364,13 +361,20 @@
             editMode: false,
             mapsvg: this.mapsvg,
             mediaUploader: this.admin.mediaUploader,
-            data: objectCopy.getData(),
+            data: object instanceof _mapsvg.customObject ? object.getData() : {},
             admin: this.admin,
             closeOnSave: closeOnSave,
             events: {
                 save: (formBuilder, data) => {
                     if (newRecord) {
-                        this.saveDataObject(data);
+                        this.saveDataObject(data).done(function () {
+                            // if(closeOnSave){
+                            //     formBuilder.close();
+                            // } else {
+                            //     _this.formBuilder.redraw();
+                            //     _this.mapsvg.hideMarkersExceptOne();
+                            // }
+                        });
                     } else {
                         this.updateDataObject(data);
                     }
@@ -380,76 +384,32 @@
                     if (closeOnSave) {
                         formBuilder.close();
                     } else {
-                        formBuilder.close();
-                        this.showNewObjectForm();
-                        // formBuilder.redraw();
-                        // this.mapsvg.hideMarkers();
+                        formBuilder.redraw();
+                        this.mapsvg.hideMarkers();
                     }
                 },
                 close: (formBuilder) => {
                     this.closeFormHandler();
                 },
                 "changed.field": (formElement, name, value) => {
-                    const data = {};
-                    data[name] = value;
+                    if (formElement.type === "location") {
+                        if (this.locationCopy) {
+                            this.mapsvg.markerDelete(this.locationCopy.marker);
+                        }
 
-                    // let oldMarkerImage = objectCopy.location && objectCopy.location.marker ? objectCopy.location.marker.src : '';
-                    let marker;
-                    if (objectCopy.location) {
-                        marker = objectCopy.location.marker;
-                    }
-                    objectCopy.update(data);
-                    if (marker && objectCopy.location === null) {
-                        this.mapsvg.markerDelete(marker);
-                    }
-                    // let newMarkerImage = objectCopy.location && objectCopy.location.marker ? objectCopy.location.marker.src : '';
-                    //
-                    // if(oldMarkerImage !== newMarkerImage){
-                    //     let locationField = formElement.formBuilder.getFormElementByType("location");
-                    //     locationField.setValue(objectCopy.location.getData());
-                    // }
-                    //
-                    // let locationField = formElement.formBuilder.getFormElementByType("location");
-                    // if (
-                    //     locationField &&
-                    //     locationField.markersByFieldEnabled &&
-                    //     locationField.markerField &&
-                    //     formElement.name === locationField.markerField &&
-                    //     Object.values(locationField.markersByField).length > 0
-                    // ) {
-                    //     const src = locationField.markersByField[value];
-                    //     if (src) {
-                    //         locationField.setValue(this.locationCopy.getData());
-                    //     }
-                    // }
+                        if (value) {
+                            this.locationCopy = new _mapsvg.location(value);
 
-                    if (
-                        formElement.type === "location" &&
-                        objectCopy.location &&
-                        !objectCopy.location.marker
-                    ) {
-                        // if (objectCopy.location && objectCopy.locaion.marker) {
-                        //     this.mapsvg.markerDelete(objectCopy.locaion.marker);
-                        // }
-                        //
-                        // if (value) {
-                        //     objectCopy.location = new _mapsvg.location(value);
-                        //     objectCopy.location.setObject(objectCopy);
-                        //
-                        const marker = new _mapsvg.marker({
-                            object: objectCopy,
-                            location: objectCopy.location,
-                            mapsvg: this.mapsvg,
-                        });
-                        //
-                        this.mapsvg.markerAdd(objectCopy.location.marker);
-                        this.mapsvg.setEditingMarker(marker);
-                        this.watchMarkerChanges(formElement, objectCopy.location);
-                        // }
+                            const marker = new _mapsvg.marker({
+                                location: this.locationCopy,
+                                mapsvg: this.mapsvg,
+                            });
+
+                            this.mapsvg.markerAdd(this.locationCopy.marker);
+                            this.mapsvg.setEditingMarker(marker);
+                            this.watchMarkerChanges(formElement, this.locationCopy);
+                        }
                     } else {
-                        // TODO проверить что весь код внизу стал не нужен за счет того что добавил objectCopy
-                        // TODO поправить marker.setImage() в гутене
-                        /*
                         let locationField = formElement.formBuilder.getFormElementByType(
                             "location"
                         );
@@ -470,31 +430,32 @@
                                 }
                             }
                         }
-                         */
                     }
                 },
                 init: (formBuilder, object) => {
                     this.mapsvg.hideMarkers();
-                    this.createMarkerFromObject(objectCopy);
 
                     const locationFormElement = formBuilder.getFormElementByType("location");
 
-                    if (locationFormElement && objectCopy.location && objectCopy.location.marker) {
-                        this.watchMarkerChanges(locationFormElement, objectCopy.location);
-                        this.mapsvg.setEditingMarker(objectCopy.location.marker);
-                    }
-
-                    this.mapsvg.setMarkerEditHandler((location) => {
-                        if (objectCopy.location) {
-                            this.mapsvg.markerDelete(objectCopy.location.marker);
+                    if (locationFormElement) {
+                        this.locationCopy = this.createLocationCopy(object);
+                        if (this.locationCopy) {
+                            this.watchMarkerChanges(locationFormElement, this.locationCopy);
+                            this.mapsvg.setEditingMarker(this.locationCopy.marker);
                         }
-                        location.setObject(objectCopy);
-                        objectCopy.location = location;
-                        this.mapsvg.setEditingMarker(objectCopy.location.marker);
-                        objectCopy.location.marker.setImage();
-                        locationFormElement.setValue(location.getData());
-                        this.watchMarkerChanges(locationFormElement, objectCopy.location);
-                    });
+                        this.mapsvg.setMarkerEditHandler((location) => {
+                            if (this.locationCopy) {
+                                this.mapsvg.markerDelete(this.locationCopy.marker);
+                            }
+                            this.locationCopy = location;
+                            this.mapsvg.setEditingMarker(this.locationCopy.marker);
+                            const object = formBuilder.getData();
+                            const img = this.mapsvg.getMarkerImage(object);
+                            this.locationCopy.marker.setImage(img);
+                            locationFormElement.setValue(location.getData());
+                            this.watchMarkerChanges(locationFormElement, this.locationCopy);
+                        });
+                    }
                 },
             },
         });
@@ -502,7 +463,6 @@
 
     MapSVGAdminDatabaseListController.prototype.copyDataObject = function (id) {
         let newObject = this.database.getLoadedObject(id).clone();
-        newObject.id = null;
 
         if (newObject.location) {
             // object.location = new mapsvg.location(object.location);
@@ -519,22 +479,20 @@
 
     MapSVGAdminDatabaseListController.prototype.saveDataObject = function (object) {
         var _this = this;
-        let locationCopy = this.objectCopy.location;
+        let locationCopy = this.locationCopy;
         return this.database
             .create(object)
             .done(function (objectWithNewId) {
                 var row = _this.addDataRow(objectWithNewId);
-                if (objectWithNewId.location) {
-                    var marker = new _mapsvg.marker({
-                        location: objectWithNewId.location,
-                        mapsvg: _this.mapsvg,
-                        object: objectWithNewId,
-                    });
-                    _this.mapsvg.markerAdd(marker);
+                if (objectWithNewId.location && locationCopy) {
+                    objectWithNewId.location.marker = locationCopy.marker;
+                    objectWithNewId.location.marker.setId("marker_" + objectWithNewId.id);
+                    objectWithNewId.location.marker.setObject(objectWithNewId);
                 }
             })
-            .fail(function (response) {
-                MapSVG.handleFailedRequest(response);
+            .fail(function () {
+                $.growl.error({ title: "Server error", message: "Can't create object" });
+                // row.remove();
             });
     };
     MapSVGAdminDatabaseListController.prototype.updateDataObject = function (rawObjectData) {
@@ -544,7 +502,6 @@
 
         return _this.database.findById(rawObjectData.id).done((object) => {
             let location = object.location;
-            this.mapsvg.disableAnimation();
             object.update(rawObjectData);
             if (object.location && object.location.marker) {
                 // var marker = _this.mapsvg.getMarker(obj.location.marker.id);
@@ -555,10 +512,9 @@
                     this.mapsvg.markerDelete(location.marker);
                 }
             }
-            setTimeout(() => this.mapsvg.enableAnimation(), 400);
             this.updateDataRow(object.getData(_this.mapsvg.regionsRepository.schema.name));
-            _this.database.update(object).fail(function (response) {
-                MapSVG.handleFailedRequest(response);
+            _this.database.update(object).fail(function () {
+                $.growl.error({ title: "Server error", message: "Can't update object" });
             });
         });
     };
@@ -567,8 +523,8 @@
         _this.btnAdd.removeClass("disabled");
         _this.mapsvg.showMarkers();
 
-        if (this.objectCopy && this.objectCopy.location && this.objectCopy.location.marker) {
-            this.mapsvg.markerDelete(this.objectCopy.location.marker);
+        if (this.locationCopy) {
+            this.mapsvg.markerDelete(this.locationCopy.marker);
         }
 
         // Redraw clusters if clustering is ON

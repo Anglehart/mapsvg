@@ -40,6 +40,7 @@ export interface MapOptionsInterface {
     dataLoaded: Function;
     db_map_id: number | string;
     source: string;
+    F;
     regionPrefix: string;
     groups: ArrayIndexed<GroupOptionsInterface>;
     galleries: ArrayIndexed<GalleryOptionsInterface>;
@@ -217,7 +218,6 @@ export interface MapOptionsInterface {
     database: {
         pagination: { on: boolean; perpage: number; showIn: string; prev: string; next: string };
         loadOnStart: boolean;
-        noFiltersNoLoad: boolean;
         regionsTableName: string;
         objectsTableName: string;
     };
@@ -231,7 +231,6 @@ export interface MapOptionsInterface {
         drawingTools?: boolean;
         geometry?: boolean;
         minZoom: number;
-        language: string;
     };
     css: string;
     containers: {
@@ -386,19 +385,15 @@ export class ViewBox {
     /**
      * Returns a string with viewBox numbers
      */
-    toString(): string {
+    toString() {
         return this.x + " " + this.y + " " + this.width + " " + this.height;
     }
 
     /**
      * Returns an array containing viewBox numbers
      */
-    toArray(): number[] {
+    toArray() {
         return [this.x, this.y, this.width, this.height];
-    }
-
-    clone(): ViewBox {
-        return new ViewBox({ x: this.x, y: this.y, width: this.width, height: this.height });
     }
 
     /**

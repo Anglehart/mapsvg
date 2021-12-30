@@ -22,32 +22,26 @@
 </script>
 
 <script type="text/x-handlebars-template" data-name="item" data-partial="true">
-    <tr id="mapsvg-data-{{params.id}}" data-id="{{params.id}}" class="mapsvg-data-row">
-        {{#each fields}}
-            {{#switch type}}
-                {{#case "image" break=true}}
-                    <td>{{getThumbs ../params name}}</td>{{/case}}
-                    {{#case "location" break=true}}
-                    <td style="max-width: 170px;">{{getMarkerImage ../params name}}</td>{{/case}} {{#case "text" break=true}}
-                    <td>{{lookup ../params name}}</td>{{/case}}
-                    {{#case "textarea" break=true}}
-                    <td>{{lookup ../params name}}</td>{{/case}}
-                    {{#case "region" break=true}}
-                    <td>{{getRegions ../params name}}</td>{{/case}}
-                    {{#case "checkbox" break=true}}
-                    <td>{{lookup ../params name}}</td>{{/case}}
-                    {{#case "post" break=true}}
-                      <td>{{getPostTitle ../params name}}</td>{{/case}}
-                    {{#case "select" break=true}}
-                    <td>{{#ifjson ../params name}} {{getSelectedOptions ../params name}} {{/ifjson}}
-                        {{#ifnotjson ../params name}} {{getLabel options ../params name}} {{/ifnotjson}}</td>{{/case}}
-                    {{#case "radio" break=true}}
-                        <td>{{#ifjson ../params name}} {{getSelectedOptions ../params name}} {{/ifjson}}
-                            {{#ifnotjson ../params name}} {{getLabel options ../params name}} {{/ifnotjson}}</td>{{/case}}
-                    {{#default break=true}}
-                        <td>{{lookup ../params name}}</td>{{/default}}
-            {{/switch}}
-        {{/each}}
+    <tr id="mapsvg-data-{{params.id}}" data-id="{{params.id}}" class="mapsvg-data-row">{{#each fields}} {{#switch
+            type}} {{#case "image" break=true}}
+        <td>{{getThumbs ../params name}}</td>{{/case}} {{#case "location"
+                                                               break=true}}
+        <td style="max-width: 170px;">{{getMarkerImage ../params name}}</td>{{/case}} {{#case "text"
+                                                                                              break=true}}
+        <td>{{lookup ../params name}}</td>{{/case}} {{#case "textarea" break=true}}
+        <td>{{lookup ../params name}}</td>{{/case}} {{#case "region" break=true}}
+        <td>{{getRegions ../params name}}</td>{{/case}} {{#case "checkbox"
+                                                                break=true}}
+        <td>{{lookup ../params name}}</td>{{/case}} {{#case "post" break=true}}
+        <td>{{getPostTitle ../params name}}</td>{{/case}} {{#case "select"
+                                                                  break=true}}
+        <td>{{#ifjson ../params name}} {{getSelectedOptions ../params name}} {{/ifjson}}
+            {{#ifnotjson ../params name}} {{getLabel options ../params name}} {{/ifnotjson}}</td>{{/case}}
+        {{#case "radio" break=true}}
+            <td>{{#ifjson ../params name}} {{getSelectedOptions ../params name}} {{/ifjson}}
+                {{#ifnotjson ../params name}} {{getLabel options ../params name}} {{/ifnotjson}}</td>{{/case}}
+        {{#default break=true}}
+            <td>{{lookup ../params name}}</td>{{/default}} {{/switch}} {{/each}}
         <td>
             <div class="btn btn-sm btn-outline-secondary mapsvg-data-copy toggle-tooltip"
                     title="Copy"><i class="mfa mfa-clone"></i>
